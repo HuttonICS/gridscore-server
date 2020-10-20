@@ -1,0 +1,100 @@
+import com.bmuschko.gradle.cargo.convention.Deployable
+import com.bmuschko.gradle.cargo.tasks.remote.CargoRedeployRemote
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.bmuschko:gradle-cargo-plugin:2.7.0'
+    }
+}
+
+plugins {
+    id 'java'
+    id 'war'
+}
+
+apply plugin: 'com.bmuschko.cargo-base'
+
+compileJava.options.encoding = 'UTF-8'
+sourceCompatibility = 11
+
+group 'uk.ac.hutton.ics.gridscore'
+version '1.0.0'
+
+repositories {
+    jcenter()
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.restlet.jee:org.restlet:2.4.0'
+    implementation 'org.restlet.jee:org.restlet.ext.servlet:2.4.0'
+    implementation 'org.restlet.jee:org.restlet.ext.json:2.4.0'
+    implementation 'org.restlet.jee:org.restlet.ext.gson:2.3.6'
+    implementation 'org.json:json:20160212'
+
+    implementation 'mysql:mysql-connector-java:8.0.16'
+    implementation 'org.jooq:jooq:3.11.10'
+    implementation 'org.jooq:jooq-codegen:3.11.10'
+
+    implementation 'javax.annotation:javax.annotation-api:1.3.2'
+    implementation 'javax.activation:activation:1.1.1'
+    implementation 'jakarta.xml.bind:jakarta.xml.bind-api:2.3.3'
+    implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.3'
+
+    providedCompile 'javax.servlet:javax.servlet-api:3.0.1'
+}
+
+// Generate a .war file
+war {
+    dependsOn jar
+
+    rootSpec.exclude('**/jhi/**/*.class')
+    rootSpec.includeEmptyDirs = false
+
+    // Include external .jar files, but exclude the Germinate client and core.
+    classpath fileTree(dir:'build/libs/', include:'*.jar')
+
+    // Set the classpath
+    manifest {
+        attributes('Class-Path': configurations.runtimeClasspath.files.collect { it.getName() }.join(' '))
+    }
+
+    webInf {
+        // Include the .properties file into the classes folder
+        from(project.projectDir.toString()) {
+            include 'config.properties'
+            include 'logging.properties'
+            into('classes')
+        }
+    }
+
+    // Include the client code if it's available
+    from("${project.projectDir.toString()}/client") {
+        include '**/**.*'
+        into('/')
+    }
+}
+
+// Runs the JOOQ code generation
+task codegen (type: JavaExec) {
+    group = 'Execution'
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'org.jooq.codegen.GenerationTool'
+    args 'jooq.xml'
+}
+
+// Deploy the created .war file to Tomcat
+task deployTomcat (type: CargoRedeployRemote) {
+    dependsOn = [war]
+    containerId = project.findProperty('tomcat.manager.version') ?: "tomcat8x"
+    protocol = project.findProperty('tomcat.manager.protocol') ?: "http"
+    hostname = project.findProperty('tomcat.manager.hostname') ?: "localhost"
+    port = (project.findProperty('tomcat.manager.port') ?: "8080") as Integer
+    username = project.findProperty('tomcat.manager.username') ?: ""
+    password = project.findProperty('tomcat.manager.password') ?: ""
+    deployables = [new Deployable(files: project.files([war.archiveFile]), context: "${project.'project.name'}/v${project.version}")]
+}
