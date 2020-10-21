@@ -9,6 +9,7 @@ public class Configuration
 	private List<Trait> traits;
 	private Double[][]  cornerPoints;
 	private List<Row>   data;
+	private Brapi       brapiConfig;
 
 	public Integer getCols()
 	{
@@ -58,5 +59,15 @@ public class Configuration
 	public void setData(List<Row> data)
 	{
 		this.data = data;
+	}
+
+	public Brapi getBrapiConfig()
+	{
+		return brapiConfig;
+	}
+
+	public void setBrapiConfig(Brapi brapiConfig)
+	{
+		this.brapiConfig = brapiConfig;
 	}
 }
