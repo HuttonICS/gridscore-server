@@ -18,11 +18,12 @@
 package jhi.gridscore.server;
 
 import jhi.gridscore.server.database.Database;
+import org.apache.commons.io.monitor.*;
 import org.jooq.tools.StringUtils;
 
 import java.io.*;
 import java.net.URL;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * {@link PropertyWatcher} is a wrapper around {@link Properties} to readAll properties.
@@ -36,7 +37,8 @@ public class PropertyWatcher
 
 	private static Properties properties = new Properties();
 
-	private static File config = null;
+	private static FileAlterationMonitor monitor;
+	private static File                  config = null;
 
 	/**
 	 * Attempts to reads the properties file and then checks the required properties.
@@ -51,7 +53,44 @@ public class PropertyWatcher
 			if (resource != null)
 			{
 				config = new File(resource.toURI());
-				loadProperties();
+				loadProperties(false);
+
+				// Then check if there's another version in the external data directory
+				String path = get("config.folder");
+				if (path != null)
+				{
+					File folder = new File(path);
+					if (folder.exists() && folder.isDirectory())
+					{
+						File potential = new File(folder, PROPERTIES_FILE);
+
+						if (potential.exists() && potential.isFile())
+						{
+							// Use it
+							config = potential;
+						}
+					}
+				}
+
+				// Finally, load it properly. This is either the original file or the external file.
+				loadProperties(true);
+
+				// Then watch whichever file exists for changes
+				FileAlterationObserver observer = new FileAlterationObserver(config.getParentFile());
+				monitor = new FileAlterationMonitor(1000L);
+				observer.addListener(new FileAlterationListenerAdaptor()
+				{
+					@Override
+					public void onFileChange(File file)
+					{
+						if (file.equals(config))
+						{
+							loadProperties(true);
+						}
+					}
+				});
+				monitor.addObserver(observer);
+				monitor.start();
 			}
 		}
 		catch (Exception e)
@@ -61,7 +100,7 @@ public class PropertyWatcher
 		}
 	}
 
-	private static void loadProperties()
+	private static void loadProperties(boolean checkAndInit)
 	{
 		try (FileInputStream stream = new FileInputStream(config))
 		{
@@ -72,7 +111,25 @@ public class PropertyWatcher
 			throw new RuntimeException(e);
 		}
 
-		Database.init(get("database.server"), get("database.name"), get("database.port"), get("database.username"), get("database.password"), true);
+		if (checkAndInit)
+		{
+			Database.init(get("database.server"), get("database.name"), get("database.port"), get("database.username"), get("database.password"), true);
+		}
+	}
+
+	public static void stopFileWatcher()
+	{
+		try
+		{
+			if (monitor != null)
+				monitor.stop();
+
+			monitor = null;
+		}
+		catch (Exception e)
+		{
+			throw new RuntimeException(e);
+		}
 	}
 
 	/**

@@ -28,6 +28,8 @@ public class ApplicationListener implements ServletContextListener
 	@Override
 	public void contextDestroyed(ServletContextEvent sce)
 	{
+		PropertyWatcher.stopFileWatcher();
+
 		try
 		{
 			// Stop the scheduler
