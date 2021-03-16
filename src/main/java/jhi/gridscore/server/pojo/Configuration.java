@@ -4,12 +4,23 @@ import java.util.List;
 
 public class Configuration
 {
+	private String      name;
 	private Integer     cols;
 	private Integer     rows;
 	private List<Trait> traits;
 	private Double[][]  cornerPoints;
-	private Cell[][]     data;
+	private Cell[][]    data;
 	private Brapi       brapiConfig;
+
+	public String getName()
+	{
+		return name;
+	}
+
+	public void setName(String name)
+	{
+		this.name = name;
+	}
 
 	public Integer getCols()
 	{
