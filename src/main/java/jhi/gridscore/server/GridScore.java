@@ -63,7 +63,7 @@ public class GridScore extends Application
 		corsFilter.setExposedHeaders(Collections.singleton("Content-Disposition"));
 
 		attachToRouter(router, "/config", ConfigServerResource.class);
-		attachToRouter(router, "/config/{uuid}", SpecificConfigServerResource.class);
+		attachToRouter(router, "/config/{id}", SpecificConfigServerResource.class);
 
 		return corsFilter;
 	}

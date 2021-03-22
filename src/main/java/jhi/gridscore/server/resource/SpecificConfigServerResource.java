@@ -14,7 +14,7 @@ import static jhi.gridscore.server.database.codegen.tables.Configurations.*;
 
 public class SpecificConfigServerResource extends ServerResource
 {
-	private String uuid;
+	private String id;
 
 	@Override
 	protected void doInit()
@@ -24,7 +24,7 @@ public class SpecificConfigServerResource extends ServerResource
 
 		try
 		{
-			this.uuid = getRequestAttributes().get("uuid").toString();
+			this.id = getRequestAttributes().get("id").toString();
 		}
 		catch (NullPointerException | NumberFormatException e)
 		{
@@ -34,7 +34,7 @@ public class SpecificConfigServerResource extends ServerResource
 	@Get
 	public Configuration postConfiguration()
 	{
-		if (StringUtils.isEmpty(uuid))
+		if (StringUtils.isEmpty(id))
 		{
 			throw new ResourceException(Status.CLIENT_ERROR_BAD_REQUEST);
 		}
@@ -44,7 +44,7 @@ public class SpecificConfigServerResource extends ServerResource
 				 DSLContext context = Database.getContext(conn))
 			{
 				ConfigurationsRecord record = context.selectFrom(CONFIGURATIONS)
-													 .where(CONFIGURATIONS.UUID.eq(uuid))
+													 .where(CONFIGURATIONS.UUID.eq(id))
 													 .fetchAny();
 
 				if (record == null)
