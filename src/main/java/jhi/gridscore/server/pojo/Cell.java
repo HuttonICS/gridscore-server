@@ -7,6 +7,7 @@ public class Cell
 	private String       name;
 	private List<String> dates;
 	private List<String> values;
+	private Boolean      isMarked;
 	private Geolocation  geolocation;
 	private String       comment;
 
@@ -33,6 +34,16 @@ public class Cell
 	public List<String> getValues()
 	{
 		return values;
+	}
+
+	public Boolean getIsMarked()
+	{
+		return isMarked;
+	}
+
+	public void setIsMarked(Boolean isMarked)
+	{
+		isMarked = isMarked;
 	}
 
 	public void setValues(List<String> values)
