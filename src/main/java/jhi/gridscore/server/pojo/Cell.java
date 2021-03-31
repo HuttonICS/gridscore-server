@@ -43,7 +43,7 @@ public class Cell
 
 	public void setIsMarked(Boolean isMarked)
 	{
-		isMarked = isMarked;
+		this.isMarked = isMarked;
 	}
 
 	public void setValues(List<String> values)
