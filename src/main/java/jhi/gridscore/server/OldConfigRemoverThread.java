@@ -18,7 +18,7 @@ public class OldConfigRemoverThread implements Runnable
 		{
 			// Delete configurations that are older than an hour
 			context.deleteFrom(CONFIGURATIONS)
-				   .where(DSL.abs(timestampDiff(DatePart.HOUR, CONFIGURATIONS.CREATED_ON, DSL.now())).ge(1))
+				   .where(DSL.abs(timestampDiff(DatePart.HOUR, CONFIGURATIONS.CREATED_ON, DSL.now())).ge(48))
 				   .execute();
 		}
 		catch (SQLException e)

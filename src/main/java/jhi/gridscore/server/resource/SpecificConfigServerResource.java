@@ -54,7 +54,7 @@ public class SpecificConfigServerResource extends ServerResource
 				else
 				{
 					Configuration result = record.getConfiguration();
-					record.delete();
+//					record.delete();
 
 					return result;
 				}
