@@ -1,9 +1,11 @@
 package jhi.gridscore.server.pojo;
 
+import java.sql.Timestamp;
 import java.util.List;
 
 public class Configuration
 {
+	private String      uuid;
 	private String      name;
 	private Integer     cols;
 	private Integer     rows;
@@ -11,6 +13,17 @@ public class Configuration
 	private Double[][]  cornerPoints;
 	private Cell[][]    data;
 	private Brapi       brapiConfig;
+	private Timestamp   lastUpdatedOn;
+
+	public String getUuid()
+	{
+		return uuid;
+	}
+
+	public void setUuid(String uuid)
+	{
+		this.uuid = uuid;
+	}
 
 	public String getName()
 	{
@@ -80,5 +93,15 @@ public class Configuration
 	public void setBrapiConfig(Brapi brapiConfig)
 	{
 		this.brapiConfig = brapiConfig;
+	}
+
+	public Timestamp getLastUpdatedOn()
+	{
+		return lastUpdatedOn;
+	}
+
+	public void setLastUpdatedOn(Timestamp lastUpdatedOn)
+	{
+		this.lastUpdatedOn = lastUpdatedOn;
 	}
 }

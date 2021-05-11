@@ -32,7 +32,7 @@ public class SpecificConfigServerResource extends ServerResource
 	}
 
 	@Get
-	public Configuration postConfiguration()
+	public Configuration getConfiguration()
 	{
 		if (StringUtils.isEmpty(id))
 		{
@@ -54,7 +54,7 @@ public class SpecificConfigServerResource extends ServerResource
 				else
 				{
 					Configuration result = record.getConfiguration();
-//					record.delete();
+					result.setUuid(id);
 
 					return result;
 				}
