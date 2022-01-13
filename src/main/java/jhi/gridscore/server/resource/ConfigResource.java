@@ -5,26 +5,32 @@ import jhi.gridscore.server.database.codegen.tables.records.ConfigurationsRecord
 import jhi.gridscore.server.pojo.Configuration;
 import org.jooq.DSLContext;
 import org.jooq.tools.StringUtils;
-import org.restlet.data.Status;
-import org.restlet.resource.*;
 
+import javax.ws.rs.*;
+import javax.ws.rs.core.*;
+import java.io.IOException;
 import java.security.SecureRandom;
 import java.sql.*;
 import java.util.Base64;
 
 import static jhi.gridscore.server.database.codegen.tables.Configurations.*;
 
-public class ConfigServerResource extends ServerResource
+@Path("config")
+public class ConfigResource extends ContextResource
 {
 	private static final SecureRandom   RANDOM  = new SecureRandom();
 	private static final Base64.Encoder ENCODER = Base64.getUrlEncoder().withoutPadding();
 
-	@Post
+	@POST
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
 	public String postConfiguration(Configuration conf)
+		throws IOException, SQLException
 	{
 		if (conf == null)
 		{
-			throw new ResourceException(Status.CLIENT_ERROR_BAD_REQUEST);
+			resp.sendError(Response.Status.BAD_REQUEST.getStatusCode());
+			return null;
 		}
 		else
 		{
@@ -59,10 +65,42 @@ public class ConfigServerResource extends ServerResource
 					return addNewConfig(context, conf);
 				}
 			}
-			catch (SQLException e)
+		}
+	}
+
+	@GET
+	@Path("/{id}")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Configuration getConfiguration(@PathParam("id") String id)
+		throws SQLException, IOException
+	{
+		if (StringUtils.isEmpty(id))
+		{
+			resp.sendError(Response.Status.BAD_REQUEST.getStatusCode());
+			return null;
+		}
+		else
+		{
+			try (Connection conn = Database.getConnection();
+				 DSLContext context = Database.getContext(conn))
 			{
-				e.printStackTrace();
-				throw new ResourceException(Status.SERVER_ERROR_INTERNAL);
+				ConfigurationsRecord record = context.selectFrom(CONFIGURATIONS)
+													 .where(CONFIGURATIONS.UUID.eq(id))
+													 .fetchAny();
+
+				if (record == null)
+				{
+					resp.sendError(Response.Status.NOT_FOUND.getStatusCode());
+					return null;
+				}
+				else
+				{
+					Configuration result = record.getConfiguration();
+					result.setUuid(id);
+
+					return result;
+				}
 			}
 		}
 	}

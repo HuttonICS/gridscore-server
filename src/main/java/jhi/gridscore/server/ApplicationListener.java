@@ -1,7 +1,10 @@
 package jhi.gridscore.server;
 
+import com.thetransactioncompany.cors.*;
+
 import javax.servlet.*;
 import javax.servlet.annotation.WebListener;
+import java.util.Properties;
 import java.util.concurrent.*;
 
 /**
@@ -19,6 +22,19 @@ public class ApplicationListener implements ServletContextListener
 	@Override
 	public void contextInitialized(ServletContextEvent sce)
 	{
+		try
+		{
+			Properties props = new Properties();
+			props.setProperty("cors.supportedMethods", "GET, POST, HEAD, OPTIONS, PATCH, DELETE, PUT");
+			final FilterRegistration.Dynamic corsFilter = sce.getServletContext().addFilter("CORS", new CORSFilter(new CORSConfiguration(props)));
+			corsFilter.setInitParameter("cors.supportedMethods", "GET, POST, HEAD, OPTIONS, PATCH, DELETE, PUT");
+			corsFilter.addMappingForUrlPatterns(null, false, "/*");
+		}
+		catch (CORSConfigurationException e)
+		{
+			e.printStackTrace();
+		}
+
 		PropertyWatcher.initialize();
 
 		backgroundScheduler = Executors.newSingleThreadScheduledExecutor();
