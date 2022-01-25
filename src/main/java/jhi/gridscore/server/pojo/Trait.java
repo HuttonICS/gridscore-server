@@ -4,6 +4,7 @@ public class Trait
 {
 	private String       name;
 	private String       type;
+	private String       mType;
 	private Restrictions restrictions;
 
 	public String getName()
@@ -24,6 +25,17 @@ public class Trait
 	public void setType(String type)
 	{
 		this.type = type;
+	}
+
+	public String getmType()
+	{
+		return mType;
+	}
+
+	public Trait setmType(String mType)
+	{
+		this.mType = mType;
+		return this;
 	}
 
 	public Restrictions getRestrictions()
