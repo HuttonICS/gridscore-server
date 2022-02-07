@@ -23,7 +23,7 @@ import org.jooq.tools.StringUtils;
 
 import java.io.*;
 import java.net.URL;
-import java.util.*;
+import java.util.Properties;
 
 /**
  * {@link PropertyWatcher} is a wrapper around {@link Properties} to readAll properties.
@@ -143,5 +143,10 @@ public class PropertyWatcher
 		String value = properties.getProperty(property);
 
 		return StringUtils.isEmpty(value) ? null : value;
+	}
+
+	public static Boolean getBoolean(String property)
+	{
+		return Boolean.parseBoolean(get(property));
 	}
 }
