@@ -3,8 +3,8 @@ package jhi.gridscore.server.resource;
 import jhi.gridscore.server.PropertyWatcher;
 import jhi.gridscore.server.pojo.Settings;
 
-import javax.ws.rs.*;
-import javax.ws.rs.core.MediaType;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.MediaType;
 
 @Path("settings")
 public class SettingsResource

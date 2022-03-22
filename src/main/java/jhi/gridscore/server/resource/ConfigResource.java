@@ -6,8 +6,8 @@ import jhi.gridscore.server.pojo.Configuration;
 import org.jooq.DSLContext;
 import org.jooq.tools.StringUtils;
 
-import javax.ws.rs.*;
-import javax.ws.rs.core.*;
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.*;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.sql.*;
