@@ -1,17 +1,23 @@
 package jhi.gridscore.server.resource;
 
+import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.*;
+import jhi.gridscore.server.PropertyWatcher;
 import jhi.gridscore.server.database.Database;
+import jhi.gridscore.server.database.codegen.tables.pojos.Configurations;
 import jhi.gridscore.server.database.codegen.tables.records.ConfigurationsRecord;
 import jhi.gridscore.server.pojo.Configuration;
+import jhi.gridscore.server.util.*;
 import org.jooq.DSLContext;
 import org.jooq.tools.StringUtils;
 
-import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.*;
-import java.io.IOException;
+import java.io.*;
+import java.net.*;
+import java.nio.file.Files;
 import java.security.SecureRandom;
 import java.sql.*;
-import java.util.Base64;
+import java.util.*;
+import java.util.logging.Logger;
 
 import static jhi.gridscore.server.database.codegen.tables.Configurations.*;
 
@@ -102,6 +108,102 @@ public class ConfigResource extends ContextResource
 					return result;
 				}
 			}
+		}
+	}
+
+	@GET
+	@Path("/{id}/export-g8")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public String getConfigExportUuid(@PathParam("id") String id)
+		throws IOException, SQLException
+	{
+		if (StringUtils.isEmpty(id))
+		{
+			resp.sendError(Response.Status.BAD_REQUEST.getStatusCode());
+			return null;
+		}
+		else
+		{
+			try (Connection conn = Database.getConnection();
+				 DSLContext context = Database.getContext(conn))
+			{
+				ConfigurationsRecord record = context.selectFrom(CONFIGURATIONS)
+													 .where(CONFIGURATIONS.UUID.eq(id))
+													 .fetchAny();
+
+				if (record == null)
+				{
+					resp.sendError(Response.Status.NOT_FOUND.getStatusCode());
+					return null;
+				}
+				else
+				{
+					Configuration result = record.getConfiguration();
+
+					URL resource = PropertyWatcher.class.getClassLoader().getResource("trials-data.xlsx");
+					if (resource != null)
+					{
+						File template = new File(resource.toURI());
+
+						String uuid = UUID.randomUUID().toString();
+						File folder = new File(System.getProperty("java.io.tmpdir"), "gridscore");
+						folder.mkdirs();
+						File target = new File(folder, uuid + ".xlsx");
+
+						DataToSpreadsheet.export(template, target, result);
+
+						return uuid;
+					}
+				}
+			}
+			catch (URISyntaxException e)
+			{
+				// Template file wasn't found
+				e.printStackTrace();
+				Logger.getLogger("").severe(e.getMessage());
+				resp.sendError(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
+				return null;
+			}
+		}
+
+		return null;
+	}
+
+	@GET
+	@Path("/{id}/export-g8/{uuid}")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	public Response getConfigExportDownload(@PathParam("id") String configId, @PathParam("uuid") String uuid)
+		throws IOException, SQLException
+	{
+		try (Connection conn = Database.getConnection();
+			 DSLContext context = Database.getContext(conn))
+		{
+			Configurations record = context.selectFrom(CONFIGURATIONS)
+												 .where(CONFIGURATIONS.UUID.eq(configId))
+												 .fetchAnyInto(Configurations.class);
+
+			File folder = new File(System.getProperty("java.io.tmpdir"), "gridscore");
+			File result = new File(folder, uuid + ".xlsx");
+
+			if (!FileUtils.isSubDirectory(folder, result))
+			{
+				resp.sendError(Response.Status.BAD_REQUEST.getStatusCode());
+				return null;
+			}
+
+			String friendlyFilename = record.getConfiguration().getName().replaceAll("\\W+", "-");
+
+			java.nio.file.Path zipFilePath = result.toPath();
+			return Response.ok((StreamingOutput) output -> {
+							   Files.copy(zipFilePath, output);
+							   Files.deleteIfExists(zipFilePath);
+						   })
+						   .type("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+						   .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename= \"" + friendlyFilename + ".xlsx\"")
+						   .header(HttpHeaders.CONTENT_LENGTH, result.length())
+						   .build();
 		}
 	}
 
