@@ -11,6 +11,7 @@ public class Configuration
 	private Integer     rows;
 	private List<Trait> traits;
 	private Double[][]  cornerPoints;
+	private Markers     markers;
 	private Cell[][]    data;
 	private Brapi       brapiConfig;
 	private Timestamp   lastUpdatedOn;
@@ -73,6 +74,17 @@ public class Configuration
 	public void setCornerPoints(Double[][] cornerPoints)
 	{
 		this.cornerPoints = cornerPoints;
+	}
+
+	public Markers getMarkers()
+	{
+		return markers;
+	}
+
+	public Configuration setMarkers(Markers markers)
+	{
+		this.markers = markers;
+		return this;
 	}
 
 	public Cell[][] getData()

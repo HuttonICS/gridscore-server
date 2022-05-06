@@ -1,8 +1,11 @@
 package jhi.gridscore.server.util;
 
+import com.google.gson.*;
 import jhi.gridscore.server.pojo.*;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.poi.ss.SpreadsheetVersion;
 import org.apache.poi.ss.usermodel.CellType;
+import org.apache.poi.ss.util.*;
 import org.apache.poi.xssf.usermodel.*;
 import org.jooq.tools.StringUtils;
 
@@ -22,6 +25,10 @@ public class DataToSpreadsheet
 		try (FileInputStream is = new FileInputStream(template);
 			 FileOutputStream os = new FileOutputStream(target))
 		{
+			List<Cell> cells = new ArrayList<>();
+			for (Cell[] r : conf.getData())
+				cells.addAll(Arrays.asList(r));
+
 			XSSFWorkbook workbook = new XSSFWorkbook(is);
 
 			XSSFSheet data = workbook.getSheet("DATA");
@@ -33,81 +40,153 @@ public class DataToSpreadsheet
 			metadata.getRow(2).getCell(2).setCellValue("GridScore trial: " + conf.getName());
 			metadata.getRow(4).getCell(2).setCellValue(SDF.format(conf.getLastUpdatedOn()));
 
-			XSSFSheet phenotypes = workbook.getSheet("PHENOTYPES");
-			IntStream.range(0, conf.getTraits().size())
-					 .forEach(i -> {
-						 Trait t = conf.getTraits().get(i);
-						 XSSFRow row = phenotypes.createRow(i + 1);
-						 row.createCell(0).setCellValue(t.getName());
-						 switch (t.getType())
-						 {
-							 case "int":
-							 case "float":
-								 row.createCell(3).setCellValue("numeric");
-								 break;
-							 case "date":
-							 case "text":
-							 case "categorical":
-								 row.createCell(3).setCellValue(t.getType());
-								 break;
-							 default:
-								 row.createCell(3).setCellValue("text");
-								 break;
-						 }
-						 if (t.getRestrictions() != null)
-						 {
-							 if (!CollectionUtils.isEmpty(t.getRestrictions().getCategories()))
-								 row.createCell(7).setCellValue(String.join(",", t.getRestrictions().getCategories()));
-							 if (t.getRestrictions().getMin() != null)
-								 row.createCell(8).setCellValue(t.getRestrictions().getMin());
-							 if (t.getRestrictions().getMax() != null)
-								 row.createCell(9).setCellValue(t.getRestrictions().getMax());
-						 }
-					 });
+			writeTraits(workbook, conf);
 
 			XSSFRow dataRow = data.getRow(0);
 			XSSFRow dateRow = dates.getRow(0);
 			IntStream.range(0, conf.getTraits().size())
 					 .forEach(i -> {
 						 Trait t = conf.getTraits().get(i);
-						 dataRow.createCell(i + 4).setCellValue(t.getName());
-						 dateRow.createCell(i + 4).setCellValue(t.getName());
+						 dataRow.createCell(i + 8).setCellValue(t.getName());
+						 dateRow.createCell(i + 8).setCellValue(t.getName());
 					 });
 
-			List<Cell> cells = new ArrayList<>();
-			for (Cell[] r : conf.getData())
-				cells.addAll(Arrays.asList(r));
+			Gson gson = new Gson();
 
 			IntStream.range(0, cells.size())
 					 .forEach(i -> {
-						 XSSFRow d = data.createRow(i + 1);
-						 XSSFRow p = dates.createRow(i + 1);
+						 XSSFRow d = data.getRow(i + 1);
+						 if (d == null)
+							 d = data.createRow(i + 1);
+						 XSSFRow p = dates.getRow(i + 1);
+						 if (p == null)
+							 p = dates.createRow(i + 1);
+
 						 Cell c = cells.get(i);
 						 // Write the germplasm name
-						 d.createCell(0).setCellValue(c.getName());
-						 p.createCell(0).setCellValue(c.getName());
+						 XSSFCell dc = getCell(d, 0);
+						 XSSFCell pc = getCell(p, 0);
+						 dc.setCellValue(c.getName());
+						 pc.setCellValue(c.getName());
 
-						 // Write the data
-						 IntStream.range(0, conf.getTraits().size())
-								  .forEach(j -> {
-									  Trait t = conf.getTraits().get(j);
+						 // Write the location
+						 if (c.getGeolocation() != null && c.getGeolocation().getLat() != null && c.getGeolocation().getLng() != null)
+						 {
+							 Double lat = c.getGeolocation().getLat();
+							 Double lng = c.getGeolocation().getLng();
+							 Double elv = c.getGeolocation().getElv();
 
-									  setCell(t, d.createCell(j + 4), c.getValues().get(j));
-									  try
-									  {
-										  if (!StringUtils.isEmpty(c.getValues().get(j)))
-											  setCell(t, p.createCell(j + 4), SDFNS.format(SDF.parse(c.getDates().get(j))));
-									  }
-									  catch (ParseException e)
-									  {
-										  // Ignore this
-									  }
-								  });
+							 dc = getCell(d, 5);
+							 pc = getCell(p, 5);
+							 dc.setCellValue(lat);
+							 pc.setCellValue(lat);
+							 dc = getCell(d, 6);
+							 pc = getCell(p, 6);
+							 dc.setCellValue(lng);
+							 pc.setCellValue(lng);
+
+							 if (elv != null)
+							 {
+								 dc = getCell(d, 7);
+								 pc = getCell(p, 7);
+								 dc.setCellValue(elv);
+								 pc.setCellValue(elv);
+							 }
+						 }
+
+						 for (int j = 0; j < conf.getTraits().size(); j++)
+						 {
+							 Trait t = conf.getTraits().get(j);
+
+							 dc = getCell(d, j + 8);
+							 pc = getCell(p, j + 8);
+
+							 String value = c.getValues().get(j);
+							 setCell(t, dc, c.getValues().get(j));
+							 try
+							 {
+								 String date = c.getDates().get(j);
+								 if (!StringUtils.isEmpty(value) && !StringUtils.isEmpty(date))
+								 {
+									 try
+									 {
+										 String[] dateArray = gson.fromJson(date, String[].class);
+
+										 if (dateArray != null && dateArray.length > 0)
+										 {
+											 setCell(t, pc, SDFNS.format(SDF.parse(dateArray[0])));
+										 }
+									 }
+									 catch (JsonSyntaxException e)
+									 {
+										 setCell(t, pc, SDFNS.format(SDF.parse(date)));
+									 }
+								 }
+							 }
+							 catch (ParseException e)
+							 {
+								 // Ignore this
+							 }
+						 }
 					 });
 
 			workbook.setActiveSheet(0);
 			workbook.write(os);
+			workbook.close();
 		}
+	}
+
+	private static XSSFCell getCell(XSSFRow row, int index)
+	{
+		XSSFCell cell = row.getCell(index);
+		if (cell == null)
+			cell = row.createCell(index);
+		return cell;
+	}
+
+	private static void writeTraits(XSSFWorkbook workbook, Configuration conf)
+	{
+		XSSFSheet phenotypes = workbook.getSheet("PHENOTYPES");
+		XSSFTable traitTable = phenotypes.getTables().get(0);
+
+		// Adjust the table size
+		AreaReference area = new AreaReference(traitTable.getStartCellReference(), new CellReference(conf.getTraits().size(), traitTable.getEndCellReference().getCol()), SpreadsheetVersion.EXCEL2007);
+		traitTable.setArea(area);
+		traitTable.getCTTable().getAutoFilter().setRef(area.formatAsString());
+		traitTable.updateReferences();
+
+		final XSSFSheet sheet = traitTable.getXSSFSheet();
+
+		IntStream.range(0, conf.getTraits().size())
+				 .forEach(i -> {
+					 Trait t = conf.getTraits().get(i);
+					 XSSFRow row = sheet.getRow(i + 1);
+					 row.createCell(0).setCellValue(t.getName());
+					 switch (t.getType())
+					 {
+						 case "int":
+						 case "float":
+							 row.createCell(3).setCellValue("numeric");
+							 break;
+						 case "date":
+						 case "text":
+						 case "categorical":
+							 row.createCell(3).setCellValue(t.getType());
+							 break;
+						 default:
+							 row.createCell(3).setCellValue("text");
+							 break;
+					 }
+					 if (t.getRestrictions() != null)
+					 {
+						 if (!CollectionUtils.isEmpty(t.getRestrictions().getCategories()))
+							 row.createCell(7).setCellValue(String.join(",", t.getRestrictions().getCategories()));
+						 if (t.getRestrictions().getMin() != null)
+							 row.createCell(8).setCellValue(t.getRestrictions().getMin());
+						 if (t.getRestrictions().getMax() != null)
+							 row.createCell(9).setCellValue(t.getRestrictions().getMax());
+					 }
+				 });
 	}
 
 	private static void setCell(Trait t, XSSFCell cell, String value)

@@ -1,6 +1,7 @@
 package jhi.gridscore.server.resource;
 
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.*;
 import jhi.gridscore.server.PropertyWatcher;
 import jhi.gridscore.server.database.Database;
@@ -13,7 +14,7 @@ import org.jooq.tools.StringUtils;
 
 import java.io.*;
 import java.net.*;
-import java.nio.file.Files;
+import java.nio.file.*;
 import java.security.SecureRandom;
 import java.sql.*;
 import java.util.*;
@@ -149,9 +150,13 @@ public class ConfigResource extends ContextResource
 						String uuid = UUID.randomUUID().toString();
 						File folder = new File(System.getProperty("java.io.tmpdir"), "gridscore");
 						folder.mkdirs();
+						File sourceCopy = new File(folder, "template-" + uuid + ".xlsx");
+						Files.copy(template.toPath(), sourceCopy.toPath(), StandardCopyOption.REPLACE_EXISTING);
 						File target = new File(folder, uuid + ".xlsx");
 
-						DataToSpreadsheet.export(template, target, result);
+						DataToSpreadsheet.export(sourceCopy, target, result);
+
+						sourceCopy.delete();
 
 						return uuid;
 					}
@@ -192,8 +197,12 @@ public class ConfigResource extends ContextResource
 				resp.sendError(Response.Status.BAD_REQUEST.getStatusCode());
 				return null;
 			}
+			if (!result.exists() || !result.isFile()) {
+				resp.sendError(Response.Status.NOT_FOUND.getStatusCode());
+				return null;
+			}
 
-			String friendlyFilename = record.getConfiguration().getName().replaceAll("\\W+", "-");
+			String friendlyFilename = record.getConfiguration().getName().replaceAll("\\W+", "-") + "-" + record.getUuid();
 
 			java.nio.file.Path zipFilePath = result.toPath();
 			return Response.ok((StreamingOutput) output -> {
@@ -201,7 +210,7 @@ public class ConfigResource extends ContextResource
 							   Files.deleteIfExists(zipFilePath);
 						   })
 						   .type("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-						   .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename= \"" + friendlyFilename + ".xlsx\"")
+						   .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=\"" + friendlyFilename + ".xlsx\"")
 						   .header(HttpHeaders.CONTENT_LENGTH, result.length())
 						   .build();
 		}
