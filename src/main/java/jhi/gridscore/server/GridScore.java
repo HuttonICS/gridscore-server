@@ -1,8 +1,7 @@
 package jhi.gridscore.server;
 
-import org.glassfish.jersey.server.ResourceConfig;
-
 import jakarta.ws.rs.ApplicationPath;
+import org.glassfish.jersey.server.ResourceConfig;
 
 @ApplicationPath("/api/")
 public class GridScore extends ResourceConfig

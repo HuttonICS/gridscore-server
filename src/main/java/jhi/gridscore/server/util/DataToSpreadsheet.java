@@ -38,7 +38,10 @@ public class DataToSpreadsheet
 			XSSFSheet metadata = workbook.getSheet("METADATA");
 			metadata.getRow(1).getCell(2).setCellValue(conf.getName());
 			metadata.getRow(2).getCell(2).setCellValue("GridScore trial: " + conf.getName());
-			metadata.getRow(4).getCell(2).setCellValue(SDF.format(conf.getLastUpdatedOn()));
+			if (conf.getLastUpdatedOn() != null)
+				metadata.getRow(4).getCell(2).setCellValue(SDF.format(conf.getLastUpdatedOn()));
+			else
+				metadata.getRow(4).getCell(2).setCellValue(SDF.format(new Date(System.currentTimeMillis())));
 
 			writeTraits(workbook, conf);
 
