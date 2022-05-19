@@ -48,7 +48,9 @@ public class ConfigResource extends ContextResource
 				if (!StringUtils.isEmpty(conf.getUuid()))
 				{
 					// Get the old config
-					ConfigurationsRecord dbConf = context.selectFrom(CONFIGURATIONS).where(CONFIGURATIONS.UUID.eq(conf.getUuid())).fetchAny();
+					ConfigurationsRecord dbConf = context.selectFrom(CONFIGURATIONS)
+														 .where(CONFIGURATIONS.UUID.eq(conf.getUuid()))
+														 .fetchAny();
 
 					if (dbConf != null)
 					{
@@ -220,7 +222,12 @@ public class ConfigResource extends ContextResource
 	{
 		byte[] buffer = new byte[20];
 		RANDOM.nextBytes(buffer);
-		String id = ENCODER.encodeToString(buffer);
+		String id;
+
+		if (!StringUtils.isEmpty(conf.getUuid()) && conf.getUuid().length() <= 36)
+			id = conf.getUuid();
+		else
+			id = ENCODER.encodeToString(buffer);
 
 		ConfigurationsRecord record = context.newRecord(CONFIGURATIONS);
 		record.setUuid(id);
