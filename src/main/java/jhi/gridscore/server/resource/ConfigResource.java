@@ -220,14 +220,19 @@ public class ConfigResource extends ContextResource
 
 	private String addNewConfig(DSLContext context, Configuration conf)
 	{
-		byte[] buffer = new byte[20];
-		RANDOM.nextBytes(buffer);
 		String id;
 
 		if (!StringUtils.isEmpty(conf.getUuid()) && conf.getUuid().length() <= 36)
+		{
 			id = conf.getUuid();
+		}
 		else
+		{
+			byte[] buffer = new byte[20];
+			RANDOM.nextBytes(buffer);
 			id = ENCODER.encodeToString(buffer);
+			conf.setUuid(id);
+		}
 
 		ConfigurationsRecord record = context.newRecord(CONFIGURATIONS);
 		record.setUuid(id);
