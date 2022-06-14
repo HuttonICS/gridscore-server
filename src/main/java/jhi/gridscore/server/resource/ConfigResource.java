@@ -1,14 +1,16 @@
 package jhi.gridscore.server.resource;
 
-import jakarta.ws.rs.*;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
 import jhi.gridscore.server.PropertyWatcher;
 import jhi.gridscore.server.database.Database;
 import jhi.gridscore.server.database.codegen.tables.pojos.Configurations;
 import jhi.gridscore.server.database.codegen.tables.records.ConfigurationsRecord;
 import jhi.gridscore.server.pojo.Configuration;
+import jhi.gridscore.server.pojo.*;
 import jhi.gridscore.server.util.*;
+import org.apache.commons.collections4.CollectionUtils;
 import org.jooq.DSLContext;
 import org.jooq.tools.StringUtils;
 
@@ -19,6 +21,7 @@ import java.security.SecureRandom;
 import java.sql.*;
 import java.util.*;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static jhi.gridscore.server.database.codegen.tables.Configurations.*;
 
@@ -27,6 +30,46 @@ public class ConfigResource extends ContextResource
 {
 	private static final SecureRandom   RANDOM  = new SecureRandom();
 	private static final Base64.Encoder ENCODER = Base64.getUrlEncoder().withoutPadding();
+
+	@POST
+	@Path("/checkupdate")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public List<Boolean> postConfigUpdates(List<MiniConf> toCheck)
+		throws SQLException
+	{
+		Logger.getLogger("").info("REQUEST: " + toCheck);
+
+		if (CollectionUtils.isEmpty(toCheck))
+			return new ArrayList<>();
+
+		List<String> uuids = toCheck.stream()
+									.map(MiniConf::getUuid)
+									.filter(Objects::nonNull)
+									.collect(Collectors.toList());
+
+		try (Connection conn = Database.getConnection();
+			 DSLContext context = Database.getContext(conn))
+		{
+			Map<String, ConfigurationsRecord> matches = context.selectFrom(CONFIGURATIONS)
+															   .where(CONFIGURATIONS.UUID.in(uuids))
+															   .fetchMap(CONFIGURATIONS.UUID);
+
+			Logger.getLogger("").info("MATCHES: " + matches);
+
+			// Return the matches (based on UUID) where there exists a request with the same UUID and an older updated date
+			return toCheck.stream()
+						  .map(t -> {
+							  ConfigurationsRecord match = matches.get(t.getUuid());
+
+							  if (match != null && match.getConfiguration().getLastUpdatedOn() != null && t.getLastUpdatedOn() != null)
+								  return match.getConfiguration().getLastUpdatedOn().after(t.getLastUpdatedOn());
+							  else
+								  return false;
+						  })
+						  .collect(Collectors.toList());
+		}
+	}
 
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -188,8 +231,8 @@ public class ConfigResource extends ContextResource
 			 DSLContext context = Database.getContext(conn))
 		{
 			Configurations record = context.selectFrom(CONFIGURATIONS)
-												 .where(CONFIGURATIONS.UUID.eq(configId))
-												 .fetchAnyInto(Configurations.class);
+										   .where(CONFIGURATIONS.UUID.eq(configId))
+										   .fetchAnyInto(Configurations.class);
 
 			File folder = new File(System.getProperty("java.io.tmpdir"), "gridscore");
 			File result = new File(folder, uuid + ".xlsx");
@@ -199,7 +242,8 @@ public class ConfigResource extends ContextResource
 				resp.sendError(Response.Status.BAD_REQUEST.getStatusCode());
 				return null;
 			}
-			if (!result.exists() || !result.isFile()) {
+			if (!result.exists() || !result.isFile())
+			{
 				resp.sendError(Response.Status.NOT_FOUND.getStatusCode());
 				return null;
 			}
