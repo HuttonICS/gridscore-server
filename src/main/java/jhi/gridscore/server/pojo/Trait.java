@@ -1,5 +1,7 @@
 package jhi.gridscore.server.pojo;
 
+import java.util.Objects;
+
 public class Trait
 {
 	private String       name;
@@ -12,9 +14,10 @@ public class Trait
 		return name;
 	}
 
-	public void setName(String name)
+	public Trait setName(String name)
 	{
 		this.name = name;
+		return this;
 	}
 
 	public String getType()
@@ -22,9 +25,10 @@ public class Trait
 		return type;
 	}
 
-	public void setType(String type)
+	public Trait setType(String type)
 	{
 		this.type = type;
+		return this;
 	}
 
 	public String getmType()
@@ -43,8 +47,35 @@ public class Trait
 		return restrictions;
 	}
 
-	public void setRestrictions(Restrictions restrictions)
+	public Trait setRestrictions(Restrictions restrictions)
 	{
 		this.restrictions = restrictions;
+		return this;
+	}
+
+	@Override
+	public boolean equals(Object o)
+	{
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		Trait trait = (Trait) o;
+		return name.equals(trait.name) && type.equals(trait.type) && Objects.equals(mType, trait.mType) && Objects.equals(restrictions, trait.restrictions);
+	}
+
+	@Override
+	public int hashCode()
+	{
+		return Objects.hash(name, type, mType, restrictions);
+	}
+
+	@Override
+	public String toString()
+	{
+		return "Trait{" +
+			"name='" + name + '\'' +
+			", type='" + type + '\'' +
+			", mType='" + mType + '\'' +
+			", restrictions=" + restrictions +
+			'}';
 	}
 }

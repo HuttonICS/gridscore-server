@@ -1,7 +1,7 @@
 package jhi.gridscore.server.pojo;
 
 import java.sql.Timestamp;
-import java.util.List;
+import java.util.*;
 
 public class Configuration
 {
@@ -15,15 +15,18 @@ public class Configuration
 	private Cell[][]    data;
 	private Brapi       brapiConfig;
 	private Timestamp   lastUpdatedOn;
+	private String      comment;
+	private DatasetType datasetType = DatasetType.TRIAL;
 
 	public String getUuid()
 	{
 		return uuid;
 	}
 
-	public void setUuid(String uuid)
+	public Configuration setUuid(String uuid)
 	{
 		this.uuid = uuid;
+		return this;
 	}
 
 	public String getName()
@@ -31,9 +34,10 @@ public class Configuration
 		return name;
 	}
 
-	public void setName(String name)
+	public Configuration setName(String name)
 	{
 		this.name = name;
+		return this;
 	}
 
 	public Integer getCols()
@@ -41,9 +45,10 @@ public class Configuration
 		return cols;
 	}
 
-	public void setCols(Integer cols)
+	public Configuration setCols(Integer cols)
 	{
 		this.cols = cols;
+		return this;
 	}
 
 	public Integer getRows()
@@ -51,9 +56,10 @@ public class Configuration
 		return rows;
 	}
 
-	public void setRows(Integer rows)
+	public Configuration setRows(Integer rows)
 	{
 		this.rows = rows;
+		return this;
 	}
 
 	public List<Trait> getTraits()
@@ -61,9 +67,10 @@ public class Configuration
 		return traits;
 	}
 
-	public void setTraits(List<Trait> traits)
+	public Configuration setTraits(List<Trait> traits)
 	{
 		this.traits = traits;
+		return this;
 	}
 
 	public Double[][] getCornerPoints()
@@ -71,9 +78,10 @@ public class Configuration
 		return cornerPoints;
 	}
 
-	public void setCornerPoints(Double[][] cornerPoints)
+	public Configuration setCornerPoints(Double[][] cornerPoints)
 	{
 		this.cornerPoints = cornerPoints;
+		return this;
 	}
 
 	public Markers getMarkers()
@@ -92,9 +100,10 @@ public class Configuration
 		return data;
 	}
 
-	public void setData(Cell[][] data)
+	public Configuration setData(Cell[][] data)
 	{
 		this.data = data;
+		return this;
 	}
 
 	public Brapi getBrapiConfig()
@@ -102,9 +111,10 @@ public class Configuration
 		return brapiConfig;
 	}
 
-	public void setBrapiConfig(Brapi brapiConfig)
+	public Configuration setBrapiConfig(Brapi brapiConfig)
 	{
 		this.brapiConfig = brapiConfig;
+		return this;
 	}
 
 	public Timestamp getLastUpdatedOn()
@@ -112,8 +122,76 @@ public class Configuration
 		return lastUpdatedOn;
 	}
 
-	public void setLastUpdatedOn(Timestamp lastUpdatedOn)
+	public Configuration setLastUpdatedOn(Timestamp lastUpdatedOn)
 	{
 		this.lastUpdatedOn = lastUpdatedOn;
+		return this;
+	}
+
+	public String getComment()
+	{
+		return comment;
+	}
+
+	public Configuration setComment(String comment)
+	{
+		this.comment = comment;
+		return this;
+	}
+
+	public DatasetType getDatasetType()
+	{
+		// Set default value
+		if (datasetType == null)
+			return DatasetType.TRIAL;
+		else
+			return datasetType;
+	}
+
+	public Configuration setDatasetType(DatasetType datasetType)
+	{
+		// Set default value
+		if (datasetType == null)
+			this.datasetType = DatasetType.TRIAL;
+		else
+			this.datasetType = datasetType;
+		return this;
+	}
+
+	@Override
+	public String toString()
+	{
+		return "Configuration{" +
+			"uuid='" + uuid + '\'' +
+			", name='" + name + '\'' +
+			", cols=" + cols +
+			", rows=" + rows +
+			", traits=" + traits +
+			", cornerPoints=" + Arrays.deepToString(cornerPoints) +
+			", markers=" + markers +
+			", data=" + Arrays.deepToString(data) +
+			", brapiConfig=" + brapiConfig +
+			", lastUpdatedOn=" + lastUpdatedOn +
+			", comment='" + comment + '\'' +
+			", datasetType=" + datasetType +
+			'}';
+	}
+
+	@Override
+	public boolean equals(Object o)
+	{
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		Configuration that = (Configuration) o;
+		return Objects.equals(uuid, that.uuid) && name.equals(that.name) && cols.equals(that.cols) && rows.equals(that.rows) && traits.equals(that.traits) && Arrays.deepEquals(cornerPoints, that.cornerPoints) && Objects.equals(markers, that.markers) && Arrays.deepEquals(data, that.data) && Objects.equals(brapiConfig, that.brapiConfig) && Objects.equals(comment, that.comment) && datasetType == that.datasetType;
+	}
+
+	@Override
+	public int hashCode()
+	{
+		int result = Objects.hash(uuid, name, cols, rows, traits, markers, brapiConfig, comment, datasetType);
+		result = 31 * result + Arrays.deepHashCode(cornerPoints);
+		result = 31 * result + Arrays.deepHashCode(data);
+		return result;
 	}
 }

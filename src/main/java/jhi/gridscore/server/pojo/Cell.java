@@ -1,6 +1,6 @@
 package jhi.gridscore.server.pojo;
 
-import java.util.List;
+import java.util.*;
 
 public class Cell
 {
@@ -16,9 +16,10 @@ public class Cell
 		return name;
 	}
 
-	public void setName(String name)
+	public Cell setName(String name)
 	{
 		this.name = name;
+		return this;
 	}
 
 	public List<String> getDates()
@@ -26,9 +27,10 @@ public class Cell
 		return dates;
 	}
 
-	public void setDates(List<String> dates)
+	public Cell setDates(List<String> dates)
 	{
 		this.dates = dates;
+		return this;
 	}
 
 	public List<String> getValues()
@@ -41,14 +43,16 @@ public class Cell
 		return isMarked;
 	}
 
-	public void setIsMarked(Boolean isMarked)
+	public Cell setIsMarked(Boolean isMarked)
 	{
 		this.isMarked = isMarked;
+		return this;
 	}
 
-	public void setValues(List<String> values)
+	public Cell setValues(List<String> values)
 	{
 		this.values = values;
+		return this;
 	}
 
 	public Geolocation getGeolocation()
@@ -56,9 +60,10 @@ public class Cell
 		return geolocation;
 	}
 
-	public void setGeolocation(Geolocation geolocation)
+	public Cell setGeolocation(Geolocation geolocation)
 	{
 		this.geolocation = geolocation;
+		return this;
 	}
 
 	public String getComment()
@@ -66,8 +71,37 @@ public class Cell
 		return comment;
 	}
 
-	public void setComment(String comment)
+	public Cell setComment(String comment)
 	{
 		this.comment = comment;
+		return this;
+	}
+
+	@Override
+	public boolean equals(Object o)
+	{
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		Cell cell = (Cell) o;
+		return name.equals(cell.name) && dates.equals(cell.dates) && values.equals(cell.values) && Objects.equals(isMarked, cell.isMarked) && Objects.equals(geolocation, cell.geolocation) && Objects.equals(comment, cell.comment);
+	}
+
+	@Override
+	public int hashCode()
+	{
+		return Objects.hash(name, dates, values, isMarked, geolocation, comment);
+	}
+
+	@Override
+	public String toString()
+	{
+		return "Cell{" +
+			"name='" + name + '\'' +
+			", dates=" + dates +
+			", values=" + values +
+			", isMarked=" + isMarked +
+			", geolocation=" + geolocation +
+			", comment='" + comment + '\'' +
+			'}';
 	}
 }

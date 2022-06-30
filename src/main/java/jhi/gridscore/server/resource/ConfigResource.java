@@ -35,13 +35,11 @@ public class ConfigResource extends ContextResource
 	@Path("/checkupdate")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public List<Boolean> postConfigUpdates(List<MiniConf> toCheck)
+	public Response postConfigUpdates(List<MiniConf> toCheck)
 		throws SQLException
 	{
-		Logger.getLogger("").info("REQUEST: " + toCheck);
-
 		if (CollectionUtils.isEmpty(toCheck))
-			return new ArrayList<>();
+			return Response.ok(new ArrayList<>()).build();
 
 		List<String> uuids = toCheck.stream()
 									.map(MiniConf::getUuid)
@@ -55,32 +53,29 @@ public class ConfigResource extends ContextResource
 															   .where(CONFIGURATIONS.UUID.in(uuids))
 															   .fetchMap(CONFIGURATIONS.UUID);
 
-			Logger.getLogger("").info("MATCHES: " + matches);
-
 			// Return the matches (based on UUID) where there exists a request with the same UUID and an older updated date
-			return toCheck.stream()
-						  .map(t -> {
-							  ConfigurationsRecord match = matches.get(t.getUuid());
+			return Response.ok(toCheck.stream()
+									  .map(t -> {
+										  ConfigurationsRecord match = matches.get(t.getUuid());
 
-							  if (match != null && match.getConfiguration().getLastUpdatedOn() != null && t.getLastUpdatedOn() != null)
-								  return match.getConfiguration().getLastUpdatedOn().after(t.getLastUpdatedOn());
-							  else
-								  return false;
-						  })
-						  .collect(Collectors.toList());
+										  if (match != null && match.getConfiguration().getLastUpdatedOn() != null && t.getLastUpdatedOn() != null)
+											  return match.getConfiguration().getLastUpdatedOn().after(t.getLastUpdatedOn());
+										  else
+											  return false;
+									  })
+									  .collect(Collectors.toList())).build();
 		}
 	}
 
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public String postConfiguration(Configuration conf)
+	public Response postConfiguration(Configuration conf, @QueryParam("override") boolean override, @QueryParam("priority") KeepPriority priority)
 		throws IOException, SQLException
 	{
 		if (conf == null)
 		{
-			resp.sendError(Response.Status.BAD_REQUEST.getStatusCode());
-			return null;
+			return Response.status(Response.Status.BAD_REQUEST).build();
 		}
 		else
 		{
@@ -97,24 +92,55 @@ public class ConfigResource extends ContextResource
 
 					if (dbConf != null)
 					{
+						if (override)
+						{
+							dbConf.setConfiguration(conf);
+							dbConf.setCreatedOn(new Timestamp(System.currentTimeMillis()));
+							dbConf.store();
+
+							return Response.ok(conf).build();
+						}
+						else
+						{
+							try
+							{
+								Configuration res = ConfigJoiner.join(dbConf.getConfiguration(), conf, priority);
+								dbConf.setConfiguration(res);
+								dbConf.setCreatedOn(new Timestamp(System.currentTimeMillis()));
+								dbConf.store();
+
+								return Response.ok(res).build();
+							}
+							catch (ConfigJoiner.IncompatibleConfigurationsException e)
+							{
+								return Response.status(Response.Status.CONFLICT.getStatusCode(), "Incompatible configurations found. Ask for user override.").build();
+							}
+							catch (ConfigJoiner.PriorityDecisionRequiredException e)
+							{
+								return Response.status(Response.Status.PRECONDITION_REQUIRED.getStatusCode(), "Cannot join configurations, user decision required regarding priority.").build();
+							}
+						}
+
 						// Update it
-						dbConf.setConfiguration(conf);
-						dbConf.setCreatedOn(new Timestamp(System.currentTimeMillis()));
-						dbConf.store();
+//						dbConf.setConfiguration(conf);
+//						dbConf.setCreatedOn(new Timestamp(System.currentTimeMillis()));
+//						dbConf.store();
 
 						// Return the same id
-						return conf.getUuid();
+//						return Response.ok(conf.getUuid()).build();
 					}
 					else
 					{
 						// Doesn't exist, create it
-						return addNewConfig(context, conf);
+						addNewConfig(context, conf);
+						return Response.ok(conf).build();
 					}
 				}
 				else
 				{
 					// No id provided, create it
-					return addNewConfig(context, conf);
+					addNewConfig(context, conf);
+					return Response.ok(conf).build();
 				}
 			}
 		}
@@ -124,13 +150,13 @@ public class ConfigResource extends ContextResource
 	@Path("/{id}")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Configuration getConfiguration(@PathParam("id") String id)
+	public Response getConfiguration(@PathParam("id") String id)
 		throws SQLException, IOException
 	{
 		if (StringUtils.isEmpty(id))
 		{
-			resp.sendError(Response.Status.BAD_REQUEST.getStatusCode());
-			return null;
+			return Response.status(Response.Status.BAD_REQUEST)
+						   .build();
 		}
 		else
 		{
@@ -143,16 +169,46 @@ public class ConfigResource extends ContextResource
 
 				if (record == null)
 				{
-					resp.sendError(Response.Status.NOT_FOUND.getStatusCode());
-					return null;
+					return Response.status(Response.Status.NOT_FOUND)
+								   .build();
 				}
 				else
 				{
 					Configuration result = record.getConfiguration();
 					result.setUuid(id);
 
-					return result;
+					return Response.ok(result)
+								   .build();
 				}
+			}
+		}
+	}
+
+	@DELETE
+	@Path("/{id}")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response deleteConfiguration(@PathParam("id") String id, @QueryParam("name") String name)
+		throws SQLException
+	{
+		if (StringUtils.isEmpty(name) || StringUtils.isEmpty(id))
+			return Response.status(Response.Status.BAD_REQUEST).build();
+
+		try (Connection conn = Database.getConnection();
+			 DSLContext context = Database.getContext(conn))
+		{
+			ConfigurationsRecord record = context.selectFrom(CONFIGURATIONS)
+												 .where(CONFIGURATIONS.UUID.eq(id))
+												 .fetchAny();
+
+			if (Objects.equals(record.getConfiguration().getName(), name))
+			{
+				record.delete();
+				return Response.ok().build();
+			}
+			else
+			{
+				return Response.status(Response.Status.FORBIDDEN).build();
 			}
 		}
 	}
@@ -161,13 +217,13 @@ public class ConfigResource extends ContextResource
 	@Path("/{id}/export-g8")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public String getConfigExportUuid(@PathParam("id") String id)
+	public Response getConfigExportUuid(@PathParam("id") String id)
 		throws IOException, SQLException
 	{
 		if (StringUtils.isEmpty(id))
 		{
-			resp.sendError(Response.Status.BAD_REQUEST.getStatusCode());
-			return null;
+			return Response.status(Response.Status.BAD_REQUEST)
+						   .build();
 		}
 		else
 		{
@@ -180,8 +236,8 @@ public class ConfigResource extends ContextResource
 
 				if (record == null)
 				{
-					resp.sendError(Response.Status.NOT_FOUND.getStatusCode());
-					return null;
+					return Response.status(Response.Status.NOT_FOUND)
+								   .build();
 				}
 				else
 				{
@@ -203,7 +259,8 @@ public class ConfigResource extends ContextResource
 
 						sourceCopy.delete();
 
-						return uuid;
+						return Response.ok(result)
+									   .build();
 					}
 				}
 			}
@@ -212,12 +269,12 @@ public class ConfigResource extends ContextResource
 				// Template file wasn't found
 				e.printStackTrace();
 				Logger.getLogger("").severe(e.getMessage());
-				resp.sendError(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode());
-				return null;
+				return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+							   .build();
 			}
 		}
 
-		return null;
+		return Response.noContent().build();
 	}
 
 	@GET
@@ -238,15 +295,9 @@ public class ConfigResource extends ContextResource
 			File result = new File(folder, uuid + ".xlsx");
 
 			if (!FileUtils.isSubDirectory(folder, result))
-			{
-				resp.sendError(Response.Status.BAD_REQUEST.getStatusCode());
-				return null;
-			}
+				return Response.status(Response.Status.BAD_REQUEST).build();
 			if (!result.exists() || !result.isFile())
-			{
-				resp.sendError(Response.Status.NOT_FOUND.getStatusCode());
-				return null;
-			}
+				return Response.status(Response.Status.NOT_FOUND).build();
 
 			String friendlyFilename = record.getConfiguration().getName().replaceAll("\\W+", "-") + "-" + record.getUuid();
 

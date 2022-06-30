@@ -7,7 +7,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.bmuschko:gradle-cargo-plugin:2.7.0'
+        classpath 'com.bmuschko:gradle-cargo-plugin:2.9.0'
     }
 }
 
@@ -22,13 +22,17 @@ compileJava.options.encoding = 'UTF-8'
 sourceCompatibility = 11
 
 group 'uk.ac.hutton.ics.gridscore'
-version '1.9.0'
+version '1.11.0'
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testImplementation 'org.glassfish.jersey.media:jersey-media-json-jackson:3.0.5'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+
     implementation 'org.json:json:20220320'
     implementation 'com.google.code.gson:gson:2.9.0'
 
@@ -92,11 +96,15 @@ task codegen (type: JavaExec) {
 // Deploy the created .war file to Tomcat
 task deployTomcat (type: CargoRedeployRemote) {
     dependsOn = [war]
-    containerId = project.findProperty('tomcat.manager.version') ?: "tomcat8x"
+    containerId = project.findProperty('tomcat.manager.version') ?: "tomcat10x"
     protocol = project.findProperty('tomcat.manager.protocol') ?: "http"
     hostname = project.findProperty('tomcat.manager.hostname') ?: "localhost"
     port = (project.findProperty('tomcat.manager.port') ?: "8080") as Integer
     username = project.findProperty('tomcat.manager.username') ?: ""
     password = project.findProperty('tomcat.manager.password') ?: ""
     deployables = [new Deployable(files: project.files([war.archiveFile]), context: "${project.'project.name'}/v${project.version}")]
+}
+
+test {
+    useJUnitPlatform()
 }

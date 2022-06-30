@@ -1,6 +1,6 @@
 package jhi.gridscore.server.pojo;
 
-import java.util.List;
+import java.util.*;
 
 public class Restrictions
 {
@@ -13,9 +13,10 @@ public class Restrictions
 		return min;
 	}
 
-	public void setMin(Double min)
+	public Restrictions setMin(Double min)
 	{
 		this.min = min;
+		return this;
 	}
 
 	public Double getMax()
@@ -23,9 +24,10 @@ public class Restrictions
 		return max;
 	}
 
-	public void setMax(Double max)
+	public Restrictions setMax(Double max)
 	{
 		this.max = max;
+		return this;
 	}
 
 	public List<String> getCategories()
@@ -33,8 +35,24 @@ public class Restrictions
 		return categories;
 	}
 
-	public void setCategories(List<String> categories)
+	public Restrictions setCategories(List<String> categories)
 	{
 		this.categories = categories;
+		return this;
+	}
+
+	@Override
+	public boolean equals(Object o)
+	{
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		Restrictions that = (Restrictions) o;
+		return Objects.equals(min, that.min) && Objects.equals(max, that.max) && Objects.equals(categories, that.categories);
+	}
+
+	@Override
+	public int hashCode()
+	{
+		return Objects.hash(min, max, categories);
 	}
 }
