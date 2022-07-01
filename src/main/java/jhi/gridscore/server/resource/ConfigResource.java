@@ -259,7 +259,7 @@ public class ConfigResource extends ContextResource
 
 						sourceCopy.delete();
 
-						return Response.ok(result)
+						return Response.ok(uuid)
 									   .build();
 					}
 				}
