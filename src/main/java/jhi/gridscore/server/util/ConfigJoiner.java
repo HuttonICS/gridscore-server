@@ -170,16 +170,22 @@ public class ConfigJoiner
 			data[i][0] = newCell;
 		}
 
-		if (aLatestTotal == null || (bLatestTotal != null && bLatestTotal.after(aLatestTotal))) {
+		if (aLatestTotal == null || (bLatestTotal != null && (bLatestTotal.equals(aLatestTotal) || bLatestTotal.after(aLatestTotal)))) {
 			result.setMarkers(b.getMarkers());
 			result.setCornerPoints(b.getCornerPoints());
 			result.setBrapiConfig(b.getBrapiConfig());
-			result.setComment(b.getComment());
+			if (!StringUtils.isEmpty(b.getComment()))
+				result.setComment(b.getComment());
+			else
+				result.setComment(a.getComment());
 		} else {
 			result.setMarkers(a.getMarkers());
 			result.setCornerPoints(a.getCornerPoints());
 			result.setBrapiConfig(a.getBrapiConfig());
-			result.setComment(a.getComment());
+			if (!StringUtils.isEmpty(a.getComment()))
+				result.setComment(a.getComment());
+			else
+				result.setComment(b.getComment());
 		}
 
 		result.setData(data);
@@ -289,16 +295,22 @@ public class ConfigJoiner
 			}
 		}
 
-		if (aLatestTotal == null || (bLatestTotal != null && bLatestTotal.after(aLatestTotal))) {
+		if (aLatestTotal == null || (bLatestTotal != null && (bLatestTotal.equals(aLatestTotal) || bLatestTotal.after(aLatestTotal)))) {
 			result.setMarkers(b.getMarkers());
 			result.setCornerPoints(b.getCornerPoints());
 			result.setBrapiConfig(b.getBrapiConfig());
-			result.setComment(b.getComment());
+			if (!StringUtils.isEmpty(b.getComment()))
+				result.setComment(b.getComment());
+			else
+				result.setComment(a.getComment());
 		} else {
 			result.setMarkers(a.getMarkers());
 			result.setCornerPoints(a.getCornerPoints());
 			result.setBrapiConfig(a.getBrapiConfig());
-			result.setComment(a.getComment());
+			if (!StringUtils.isEmpty(a.getComment()))
+				result.setComment(a.getComment());
+			else
+				result.setComment(b.getComment());
 		}
 
 		result.setData(a.getData());
