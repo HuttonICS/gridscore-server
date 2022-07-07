@@ -213,11 +213,11 @@ public class ConfigResource extends ContextResource
 		}
 	}
 
-	@GET
+	@POST
 	@Path("/{id}/export-g8")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getConfigExportUuid(@PathParam("id") String id)
+	public Response getConfigExportUuid(@PathParam("id") String id, List<DataToSpreadsheet.MultiTraitAgg> multiTraitAgg)
 		throws IOException, SQLException
 	{
 		if (StringUtils.isEmpty(id))
@@ -243,6 +243,12 @@ public class ConfigResource extends ContextResource
 				{
 					Configuration result = record.getConfiguration();
 
+					if (multiTraitAgg == null || multiTraitAgg.size() != result.getTraits().size())
+					{
+						return Response.status(Response.Status.BAD_REQUEST)
+									   .build();
+					}
+
 					URL resource = PropertyWatcher.class.getClassLoader().getResource("trials-data.xlsx");
 					if (resource != null)
 					{
@@ -255,7 +261,7 @@ public class ConfigResource extends ContextResource
 						Files.copy(template.toPath(), sourceCopy.toPath(), StandardCopyOption.REPLACE_EXISTING);
 						File target = new File(folder, uuid + ".xlsx");
 
-						DataToSpreadsheet.export(sourceCopy, target, result);
+						DataToSpreadsheet.export(sourceCopy, target, result, multiTraitAgg);
 
 						sourceCopy.delete();
 

@@ -16,7 +16,7 @@ import java.util.stream.IntStream;
 
 public class DataToSpreadsheet
 {
-	public static void export(File template, File target, Configuration conf)
+	public static void export(File template, File target, Configuration conf, List<MultiTraitAgg> multiTraitAgg)
 		throws IOException
 	{
 		SimpleDateFormat SDF = new SimpleDateFormat("yyyy-MM-dd");
@@ -101,11 +101,63 @@ public class DataToSpreadsheet
 						 {
 							 Trait t = conf.getTraits().get(j);
 
+							 MultiTraitAgg agg = multiTraitAgg.get(j);
+
 							 dc = getCell(d, j + 8);
 							 pc = getCell(p, j + 8);
 
 							 String value = c.getValues().get(j);
-							 setCell(t, dc, c.getValues().get(j));
+							 try
+							 {
+								 // Try to parse the value as an array (will fail for single-traits)
+								 String[] valueArray = gson.fromJson(value, String[].class);
+
+								 // If there is no value, set the cell to null
+								 if (valueArray == null || valueArray.length < 1)
+								 {
+									 setCell(t, dc, null);
+								 }
+								 else
+								 {
+									 // Else, check the aggregation method
+									 if (agg == null)
+									 {
+										 setCell(t, dc, value);
+									 }
+									 else if (agg == MultiTraitAgg.last)
+									 {
+										 setCell(t, dc, valueArray[valueArray.length - 1]);
+									 }
+									 else if (agg == MultiTraitAgg.avg || agg == MultiTraitAgg.sum)
+									 {
+										 double total = 0;
+
+										 int count = 0;
+										 for (String s : valueArray)
+										 {
+											 try
+											 {
+												 total += Double.parseDouble(s);
+												 count++;
+											 }
+											 catch (NullPointerException | NumberFormatException e)
+											 {
+												 // Do nothing here
+											 }
+										 }
+
+										 if (agg == MultiTraitAgg.avg)
+											 total /= count;
+
+										 setCell(t, dc, Double.toString(total));
+									 }
+								 }
+							 }
+							 catch (JsonSyntaxException | NullPointerException e)
+							 {
+								 setCell(t, dc, value);
+							 }
+
 							 try
 							 {
 								 String date = c.getDates().get(j);
@@ -117,13 +169,18 @@ public class DataToSpreadsheet
 
 										 if (dateArray != null && dateArray.length > 0)
 										 {
-											 setCell(t, pc, SDFNS.format(SDF.parse(dateArray[0])));
+											 // Use the last date available
+											 setCell(t, pc, SDFNS.format(SDF.parse(dateArray[dateArray.length - 1])));
 										 }
 									 }
 									 catch (JsonSyntaxException e)
 									 {
 										 setCell(t, pc, SDFNS.format(SDF.parse(date)));
 									 }
+								 }
+								 else
+								 {
+									 setCell(t, pc, null);
 								 }
 							 }
 							 catch (ParseException e)
@@ -164,6 +221,10 @@ public class DataToSpreadsheet
 				 .forEach(i -> {
 					 Trait t = conf.getTraits().get(i);
 					 XSSFRow row = sheet.getRow(i + 1);
+
+					 if (row == null)
+						 row = sheet.createRow(i + 1);
+
 					 row.createCell(0).setCellValue(t.getName());
 					 switch (t.getType())
 					 {
@@ -197,5 +258,12 @@ public class DataToSpreadsheet
 		if (Objects.equals(t.getType(), "date"))
 			cell.setCellType(CellType.STRING);
 		cell.setCellValue(value);
+	}
+
+	public static enum MultiTraitAgg
+	{
+		last,
+		avg,
+		sum
 	}
 }
