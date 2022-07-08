@@ -1,13 +1,16 @@
 import com.google.gson.Gson;
-import jakarta.ws.rs.client.WebTarget;
+import jakarta.ws.rs.client.*;
 import jakarta.ws.rs.core.*;
 import jhi.gridscore.server.pojo.Configuration;
+import jhi.gridscore.server.util.DataToSpreadsheet;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.jooq.tools.StringUtils;
 import org.junit.jupiter.api.*;
 
 import java.io.InputStream;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class GerminateExportTest extends ConfigTest
@@ -46,10 +49,12 @@ public class GerminateExportTest extends ConfigTest
 	void exportToGerminate()
 		throws Exception
 	{
+		List<DataToSpreadsheet.MultiTraitAgg> agg = trial.getTraits().stream().map(t -> t.getmType() == null ? null : DataToSpreadsheet.MultiTraitAgg.last).collect(Collectors.toList());
+
 		Response response = client.target(URL)
 								  .path(trial.getUuid() + "/export-g8")
 								  .request(MediaType.APPLICATION_JSON)
-								  .get();
+								  .post(Entity.entity(agg, MediaType.APPLICATION_JSON));
 		Assertions.assertEquals(200, response.getStatus());
 		String exportUuid = response.readEntity(String.class);
 		Assertions.assertFalse(StringUtils.isEmpty(exportUuid));
