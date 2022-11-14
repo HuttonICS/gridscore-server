@@ -25,9 +25,13 @@ public class DataToSpreadsheet
 		try (FileInputStream is = new FileInputStream(template);
 			 FileOutputStream os = new FileOutputStream(target))
 		{
-			List<Cell> cells = new ArrayList<>();
-			for (Cell[] r : conf.getData())
-				cells.addAll(Arrays.asList(r));
+			List<CoordinateCell> cells = new ArrayList<>();
+			for (int row = 0; row < conf.getData().length; row++) {
+				Cell[] r = conf.getData()[row];
+				for (int col = 0; col < r.length; col++) {
+					cells.add(new CoordinateCell(r[col], row, col));
+				}
+			}
 
 			XSSFWorkbook workbook = new XSSFWorkbook(is);
 
@@ -50,8 +54,8 @@ public class DataToSpreadsheet
 			IntStream.range(0, conf.getTraits().size())
 					 .forEach(i -> {
 						 Trait t = conf.getTraits().get(i);
-						 dataRow.createCell(i + 8).setCellValue(t.getName());
-						 dateRow.createCell(i + 8).setCellValue(t.getName());
+						 dataRow.createCell(i + 10).setCellValue(t.getName());
+						 dateRow.createCell(i + 10).setCellValue(t.getName());
 					 });
 
 			Gson gson = new Gson();
@@ -65,12 +69,30 @@ public class DataToSpreadsheet
 						 if (p == null)
 							 p = dates.createRow(i + 1);
 
-						 Cell c = cells.get(i);
+						 CoordinateCell c = cells.get(i);
 						 // Write the germplasm name
 						 XSSFCell dc = getCell(d, 0);
 						 XSSFCell pc = getCell(p, 0);
 						 dc.setCellValue(c.getName());
 						 pc.setCellValue(c.getName());
+
+						 // Write the rep
+						 dc = getCell(d, 1);
+						 pc = getCell(p, 1);
+						 dc.setCellValue(c.getRep());
+						 pc.setCellValue(c.getRep());
+
+						 // Write the row
+						 dc = getCell(d, 3);
+						 pc = getCell(p, 3);
+						 dc.setCellValue(c.row + 1);
+						 pc.setCellValue(c.row + 1);
+
+						 // Write the column
+						 dc = getCell(d, 4);
+						 pc = getCell(p, 4);
+						 dc.setCellValue(c.col + 1);
+						 pc.setCellValue(c.col + 1);
 
 						 // Write the location
 						 if (c.getGeolocation() != null && c.getGeolocation().getLat() != null && c.getGeolocation().getLng() != null)
@@ -79,19 +101,19 @@ public class DataToSpreadsheet
 							 Double lng = c.getGeolocation().getLng();
 							 Double elv = c.getGeolocation().getElv();
 
-							 dc = getCell(d, 5);
-							 pc = getCell(p, 5);
+							 dc = getCell(d, 7);
+							 pc = getCell(p, 7);
 							 dc.setCellValue(lat);
 							 pc.setCellValue(lat);
-							 dc = getCell(d, 6);
-							 pc = getCell(p, 6);
+							 dc = getCell(d, 8);
+							 pc = getCell(p, 8);
 							 dc.setCellValue(lng);
 							 pc.setCellValue(lng);
 
 							 if (elv != null)
 							 {
-								 dc = getCell(d, 7);
-								 pc = getCell(p, 7);
+								 dc = getCell(d, 9);
+								 pc = getCell(p, 9);
 								 dc.setCellValue(elv);
 								 pc.setCellValue(elv);
 							 }
@@ -103,8 +125,8 @@ public class DataToSpreadsheet
 
 							 MultiTraitAgg agg = multiTraitAgg.get(j);
 
-							 dc = getCell(d, j + 8);
-							 pc = getCell(p, j + 8);
+							 dc = getCell(d, j + 10);
+							 pc = getCell(p, j + 10);
 
 							 String value = c.getValues().get(j);
 							 try
@@ -258,6 +280,17 @@ public class DataToSpreadsheet
 		if (Objects.equals(t.getType(), "date"))
 			cell.setCellType(CellType.STRING);
 		cell.setCellValue(value);
+	}
+
+	private static class CoordinateCell extends Cell {
+		private int row;
+		private int col;
+
+		public CoordinateCell (Cell original, int row, int col) {
+			super(original);
+			this.row = row;
+			this.col = col;
+		}
 	}
 
 	public static enum MultiTraitAgg

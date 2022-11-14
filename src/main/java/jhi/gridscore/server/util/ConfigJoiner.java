@@ -52,21 +52,25 @@ public class ConfigJoiner
 		}
 	}
 
+	private static String getId(Cell cell) {
+		return cell.getName() + "-" + cell.getRep();
+	}
+
 	private static Configuration handleSurvey(Configuration a, Configuration b, List<Trait> combinedTraits, Map<String, Integer> ati, Map<String, Integer> bti, KeepPriority priority)
 		throws PriorityDecisionRequiredException
 	{
-		Set<String> combinedGermplasmSet = new LinkedHashSet<>();
-		Arrays.stream(a.getData()).forEach(r -> Arrays.stream(r).forEach(c -> combinedGermplasmSet.add(c.getName())));
-		Arrays.stream(b.getData()).forEach(r -> Arrays.stream(r).forEach(c -> combinedGermplasmSet.add(c.getName())));
-		List<String> combinedGermplasm = new ArrayList<>(combinedGermplasmSet);
+		Map<String, SimpleCell> combinedGermplasmSet = new LinkedHashMap<>();
+		Arrays.stream(a.getData()).forEach(r -> Arrays.stream(r).forEach(c -> combinedGermplasmSet.put(getId(c), new SimpleCell(c))));
+		Arrays.stream(b.getData()).forEach(r -> Arrays.stream(r).forEach(c -> combinedGermplasmSet.put(getId(c), new SimpleCell(c))));
+		List<SimpleCell> combinedGermplasm = new ArrayList<>(combinedGermplasmSet.values());
 
-		Map<String, Integer> agi = new HashMap<>();
-		Map<String, Integer> bgi = new HashMap<>();
+		Map<SimpleCell, Integer> agi = new HashMap<>();
+		Map<SimpleCell, Integer> bgi = new HashMap<>();
 
 		for (int i = 0; i < a.getData().length; i++)
-			agi.put(a.getData()[i][0].getName(), i);
+			agi.put(new SimpleCell(a.getData()[i][0]), i);
 		for (int i = 0; i < b.getData().length; i++)
-			bgi.put(b.getData()[i][0].getName(), i);
+			bgi.put(new SimpleCell(b.getData()[i][0]), i);
 
 		Configuration result = new Configuration();
 		result.setUuid(b.getUuid());
@@ -95,8 +99,10 @@ public class ConfigJoiner
 			if (bgIndex != null)
 				bc = bd[bgIndex][0];
 
+			SimpleCell sc = combinedGermplasm.get(i);
 			Cell newCell = new Cell();
-			newCell.setName(combinedGermplasm.get(i));
+			newCell.setName(sc.name);
+			newCell.setRep(sc.rep);
 
 			String[] values = new String[combinedTraits.size()];
 			String[] dates = new String[combinedTraits.size()];
@@ -225,8 +231,8 @@ public class ConfigJoiner
 				Cell ac = ad[y][x];
 				Cell bc = bd[y][x];
 
-				if (!Objects.equals(ac.getName(), bc.getName()))
-					throw new IncompatibleConfigurationsException("Incompatible cell names: Row: " + y + " col: " + x);
+				if (!Objects.equals(ac.getName(), bc.getName()) || !Objects.equals(ac.getRep(), bc.getRep()))
+					throw new IncompatibleConfigurationsException("Incompatible cell names/reps: Row: " + y + " col: " + x);
 
 				String[] values = new String[combinedTraits.size()];
 				String[] dates = new String[combinedTraits.size()];
@@ -560,6 +566,31 @@ public class ConfigJoiner
 		}
 
 		return result;
+	}
+
+	private static class SimpleCell {
+		String name;
+		String rep;
+
+		public SimpleCell(Cell cell) {
+			this.name = cell.getName();
+			this.rep = cell.getRep();
+		}
+
+		@Override
+		public boolean equals(Object o)
+		{
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			SimpleCell that = (SimpleCell) o;
+			return name.equals(that.name) && Objects.equals(rep, that.rep);
+		}
+
+		@Override
+		public int hashCode()
+		{
+			return Objects.hash(name, rep);
+		}
 	}
 
 	private static class SingleCellResult
