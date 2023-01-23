@@ -1,18 +1,26 @@
 package jhi.gridscore.server.util;
 
 import com.google.gson.*;
+import jhi.gridscore.server.database.Database;
+import jhi.gridscore.server.database.codegen.tables.records.ConfigurationsRecord;
 import jhi.gridscore.server.pojo.*;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.poi.ss.SpreadsheetVersion;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.util.*;
 import org.apache.poi.xssf.usermodel.*;
+import org.jooq.DSLContext;
 import org.jooq.tools.StringUtils;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.sql.*;
 import java.text.*;
 import java.util.*;
+import java.util.Date;
 import java.util.stream.IntStream;
+
+import static jhi.gridscore.server.database.codegen.tables.Configurations.*;
 
 public class DataToSpreadsheet
 {
@@ -25,14 +33,6 @@ public class DataToSpreadsheet
 		try (FileInputStream is = new FileInputStream(template);
 			 FileOutputStream os = new FileOutputStream(target))
 		{
-			List<CoordinateCell> cells = new ArrayList<>();
-			for (int row = 0; row < conf.getData().length; row++) {
-				Cell[] r = conf.getData()[row];
-				for (int col = 0; col < r.length; col++) {
-					cells.add(new CoordinateCell(r[col], row, col));
-				}
-			}
-
 			XSSFWorkbook workbook = new XSSFWorkbook(is);
 
 			XSSFSheet data = workbook.getSheet("DATA");
@@ -58,164 +58,351 @@ public class DataToSpreadsheet
 						 dateRow.createCell(i + 10).setCellValue(t.getName());
 					 });
 
-			Gson gson = new Gson();
 
-			IntStream.range(0, cells.size())
-					 .forEach(i -> {
-						 XSSFRow d = data.getRow(i + 1);
-						 if (d == null)
-							 d = data.createRow(i + 1);
-						 XSSFRow p = dates.getRow(i + 1);
-						 if (p == null)
-							 p = dates.createRow(i + 1);
-
-						 CoordinateCell c = cells.get(i);
-						 // Write the germplasm name
-						 XSSFCell dc = getCell(d, 0);
-						 XSSFCell pc = getCell(p, 0);
-						 dc.setCellValue(c.getName());
-						 pc.setCellValue(c.getName());
-
-						 // Write the rep
-						 dc = getCell(d, 1);
-						 pc = getCell(p, 1);
-						 dc.setCellValue(c.getRep());
-						 pc.setCellValue(c.getRep());
-
-						 // Write the row
-						 dc = getCell(d, 3);
-						 pc = getCell(p, 3);
-						 dc.setCellValue(c.row + 1);
-						 pc.setCellValue(c.row + 1);
-
-						 // Write the column
-						 dc = getCell(d, 4);
-						 pc = getCell(p, 4);
-						 dc.setCellValue(c.col + 1);
-						 pc.setCellValue(c.col + 1);
-
-						 // Write the location
-						 if (c.getGeolocation() != null && c.getGeolocation().getLat() != null && c.getGeolocation().getLng() != null)
-						 {
-							 Double lat = c.getGeolocation().getLat();
-							 Double lng = c.getGeolocation().getLng();
-							 Double elv = c.getGeolocation().getElv();
-
-							 dc = getCell(d, 7);
-							 pc = getCell(p, 7);
-							 dc.setCellValue(lat);
-							 pc.setCellValue(lat);
-							 dc = getCell(d, 8);
-							 pc = getCell(p, 8);
-							 dc.setCellValue(lng);
-							 pc.setCellValue(lng);
-
-							 if (elv != null)
-							 {
-								 dc = getCell(d, 9);
-								 pc = getCell(p, 9);
-								 dc.setCellValue(elv);
-								 pc.setCellValue(elv);
-							 }
-						 }
-
-						 for (int j = 0; j < conf.getTraits().size(); j++)
-						 {
-							 Trait t = conf.getTraits().get(j);
-
-							 MultiTraitAgg agg = multiTraitAgg.get(j);
-
-							 dc = getCell(d, j + 10);
-							 pc = getCell(p, j + 10);
-
-							 String value = c.getValues().get(j);
-							 try
-							 {
-								 // Try to parse the value as an array (will fail for single-traits)
-								 String[] valueArray = gson.fromJson(value, String[].class);
-
-								 // If there is no value, set the cell to null
-								 if (valueArray == null || valueArray.length < 1)
-								 {
-									 setCell(t, dc, null);
-								 }
-								 else
-								 {
-									 // Else, check the aggregation method
-									 if (agg == null)
-									 {
-										 setCell(t, dc, value);
-									 }
-									 else if (agg == MultiTraitAgg.last)
-									 {
-										 setCell(t, dc, valueArray[valueArray.length - 1]);
-									 }
-									 else if (agg == MultiTraitAgg.avg || agg == MultiTraitAgg.sum)
-									 {
-										 double total = 0;
-
-										 int count = 0;
-										 for (String s : valueArray)
-										 {
-											 try
-											 {
-												 total += Double.parseDouble(s);
-												 count++;
-											 }
-											 catch (NullPointerException | NumberFormatException e)
-											 {
-												 // Do nothing here
-											 }
-										 }
-
-										 if (agg == MultiTraitAgg.avg)
-											 total /= count;
-
-										 setCell(t, dc, Double.toString(total));
-									 }
-								 }
-							 }
-							 catch (JsonSyntaxException | NullPointerException e)
-							 {
-								 setCell(t, dc, value);
-							 }
-
-							 try
-							 {
-								 String date = c.getDates().get(j);
-								 if (!StringUtils.isEmpty(value) && !StringUtils.isEmpty(date))
-								 {
-									 try
-									 {
-										 String[] dateArray = gson.fromJson(date, String[].class);
-
-										 if (dateArray != null && dateArray.length > 0)
-										 {
-											 // Use the last date available
-											 setCell(t, pc, SDFNS.format(SDF.parse(dateArray[dateArray.length - 1])));
-										 }
-									 }
-									 catch (JsonSyntaxException e)
-									 {
-										 setCell(t, pc, SDFNS.format(SDF.parse(date)));
-									 }
-								 }
-								 else
-								 {
-									 setCell(t, pc, null);
-								 }
-							 }
-							 catch (ParseException e)
-							 {
-								 // Ignore this
-							 }
-						 }
-					 });
+			if (CollectionUtils.isEmpty(multiTraitAgg))
+			{
+				exportNonAggregated(conf, data, dates, SDF, SDFNS);
+			}
+			else
+			{
+				exportAggregated(conf, data, dates, multiTraitAgg, SDF, SDFNS);
+			}
 
 			workbook.setActiveSheet(0);
 			workbook.write(os);
 			workbook.close();
 		}
+	}
+
+	private static void exportNonAggregated(Configuration conf, XSSFSheet data, XSSFSheet dates, SimpleDateFormat SDF, SimpleDateFormat SDFNS)
+	{
+		Gson gson = new Gson();
+
+		List<CoordinateDateCell> cells = new ArrayList<>();
+		for (int row = 0; row < conf.getData().length; row++)
+		{
+			Cell[] r = conf.getData()[row];
+			for (int col = 0; col < r.length; col++)
+			{
+				Set<String> unique = new HashSet<>();
+				for (String date : r[col].getDates())
+				{
+					try
+					{
+						// Try to parse the value as an array (will fail for single-traits)
+						String[] dateArray = gson.fromJson(date, String[].class);
+
+						// Multi-trait, use individual dates in array
+						for (String multiDate : dateArray)
+						{
+							if (!unique.contains(multiDate))
+							{
+								cells.add(new CoordinateDateCell(r[col], row, col, multiDate));
+								unique.add(multiDate);
+							}
+						}
+					}
+					catch (JsonSyntaxException | NullPointerException e)
+					{
+						// Single-trait -> just use the date directly
+						if (!unique.contains(date))
+						{
+							cells.add(new CoordinateDateCell(r[col], row, col, date));
+							unique.add(date);
+						}
+					}
+				}
+
+			}
+		}
+
+		IntStream.range(0, cells.size())
+				 .forEach(i -> {
+					 XSSFRow d = data.getRow(i + 1);
+					 if (d == null)
+						 d = data.createRow(i + 1);
+					 XSSFRow p = dates.getRow(i + 1);
+					 if (p == null)
+						 p = dates.createRow(i + 1);
+
+					 CoordinateDateCell c = cells.get(i);
+					 // Write the germplasm name
+					 XSSFCell dc = getCell(d, 0);
+					 XSSFCell pc = getCell(p, 0);
+					 dc.setCellValue(c.getName());
+					 pc.setCellValue(c.getName());
+
+					 // Write the rep
+					 dc = getCell(d, 1);
+					 pc = getCell(p, 1);
+					 dc.setCellValue(c.getRep());
+					 pc.setCellValue(c.getRep());
+
+					 // Write the row
+					 dc = getCell(d, 3);
+					 pc = getCell(p, 3);
+					 dc.setCellValue(c.row + 1);
+					 pc.setCellValue(c.row + 1);
+
+					 // Write the column
+					 dc = getCell(d, 4);
+					 pc = getCell(p, 4);
+					 dc.setCellValue(c.col + 1);
+					 pc.setCellValue(c.col + 1);
+
+					 // Write the location
+					 if (c.getGeolocation() != null && c.getGeolocation().getLat() != null && c.getGeolocation().getLng() != null)
+					 {
+						 Double lat = c.getGeolocation().getLat();
+						 Double lng = c.getGeolocation().getLng();
+						 Double elv = c.getGeolocation().getElv();
+
+						 dc = getCell(d, 7);
+						 pc = getCell(p, 7);
+						 dc.setCellValue(lat);
+						 pc.setCellValue(lat);
+						 dc = getCell(d, 8);
+						 pc = getCell(p, 8);
+						 dc.setCellValue(lng);
+						 pc.setCellValue(lng);
+
+						 if (elv != null)
+						 {
+							 dc = getCell(d, 9);
+							 pc = getCell(p, 9);
+							 dc.setCellValue(elv);
+							 pc.setCellValue(elv);
+						 }
+					 }
+
+					 for (int j = 0; j < conf.getTraits().size(); j++)
+					 {
+						 Trait t = conf.getTraits().get(j);
+
+						 dc = getCell(d, j + 10);
+						 pc = getCell(p, j + 10);
+
+						 String value = c.getValues().get(j);
+						 String date = c.getDates().get(j);
+
+						 try
+						 {
+							 // Try to parse the value as an array (will fail for single-traits)
+							 String[] valueArray = gson.fromJson(value, String[].class);
+							 String[] dateArray = gson.fromJson(date, String[].class);
+
+							 // If there is no value, set the cell to null
+							 if (valueArray == null || valueArray.length < 1)
+							 {
+								 setCell(t, dc, null);
+							 }
+							 else
+							 {
+								 for (int index = 0; index < valueArray.length; index++)
+								 {
+									 String tsValue = valueArray[index];
+									 String tsDate = dateArray[index];
+
+									 // Check this is the date we're working with
+									 if (Objects.equals(c.date, tsDate))
+									 {
+										 setCell(t, dc, tsValue);
+										 try
+										 {
+											 setCell(t, pc, SDFNS.format(SDF.parse(tsDate)));
+										 }
+										 catch (ParseException pe)
+										 {
+											 // Do nothing here
+										 }
+									 }
+								 }
+							 }
+						 }
+						 catch (JsonSyntaxException | NullPointerException e)
+						 {
+							 if (Objects.equals(c.date, date))
+							 {
+								 setCell(t, dc, value);
+								 try
+								 {
+									 setCell(t, pc, SDFNS.format(SDF.parse(date)));
+								 }
+								 catch (ParseException pe)
+								 {
+									 // Do nothing here
+								 }
+							 }
+						 }
+					 }
+				 });
+	}
+
+	private static void exportAggregated(Configuration conf, XSSFSheet data, XSSFSheet dates, List<MultiTraitAgg> multiTraitAgg, SimpleDateFormat SDF, SimpleDateFormat SDFNS)
+	{
+		Gson gson = new Gson();
+
+		List<CoordinateCell> cells = new ArrayList<>();
+		for (int row = 0; row < conf.getData().length; row++)
+		{
+			Cell[] r = conf.getData()[row];
+			for (int col = 0; col < r.length; col++)
+			{
+				cells.add(new CoordinateCell(r[col], row, col));
+			}
+		}
+
+		IntStream.range(0, cells.size())
+				 .forEach(i -> {
+					 XSSFRow d = data.getRow(i + 1);
+					 if (d == null)
+						 d = data.createRow(i + 1);
+					 XSSFRow p = dates.getRow(i + 1);
+					 if (p == null)
+						 p = dates.createRow(i + 1);
+
+					 CoordinateCell c = cells.get(i);
+					 // Write the germplasm name
+					 XSSFCell dc = getCell(d, 0);
+					 XSSFCell pc = getCell(p, 0);
+					 dc.setCellValue(c.getName());
+					 pc.setCellValue(c.getName());
+
+					 // Write the rep
+					 dc = getCell(d, 1);
+					 pc = getCell(p, 1);
+					 dc.setCellValue(c.getRep());
+					 pc.setCellValue(c.getRep());
+
+					 // Write the row
+					 dc = getCell(d, 3);
+					 pc = getCell(p, 3);
+					 dc.setCellValue(c.row + 1);
+					 pc.setCellValue(c.row + 1);
+
+					 // Write the column
+					 dc = getCell(d, 4);
+					 pc = getCell(p, 4);
+					 dc.setCellValue(c.col + 1);
+					 pc.setCellValue(c.col + 1);
+
+					 // Write the location
+					 if (c.getGeolocation() != null && c.getGeolocation().getLat() != null && c.getGeolocation().getLng() != null)
+					 {
+						 Double lat = c.getGeolocation().getLat();
+						 Double lng = c.getGeolocation().getLng();
+						 Double elv = c.getGeolocation().getElv();
+
+						 dc = getCell(d, 7);
+						 pc = getCell(p, 7);
+						 dc.setCellValue(lat);
+						 pc.setCellValue(lat);
+						 dc = getCell(d, 8);
+						 pc = getCell(p, 8);
+						 dc.setCellValue(lng);
+						 pc.setCellValue(lng);
+
+						 if (elv != null)
+						 {
+							 dc = getCell(d, 9);
+							 pc = getCell(p, 9);
+							 dc.setCellValue(elv);
+							 pc.setCellValue(elv);
+						 }
+					 }
+
+					 for (int j = 0; j < conf.getTraits().size(); j++)
+					 {
+						 Trait t = conf.getTraits().get(j);
+
+						 MultiTraitAgg agg = multiTraitAgg.get(j);
+
+						 dc = getCell(d, j + 10);
+						 pc = getCell(p, j + 10);
+
+						 String value = c.getValues().get(j);
+						 try
+						 {
+							 // Try to parse the value as an array (will fail for single-traits)
+							 String[] valueArray = gson.fromJson(value, String[].class);
+
+							 // If there is no value, set the cell to null
+							 if (valueArray == null || valueArray.length < 1)
+							 {
+								 setCell(t, dc, null);
+							 }
+							 else
+							 {
+								 // Else, check the aggregation method
+								 if (agg == null)
+								 {
+									 setCell(t, dc, value);
+								 }
+								 else if (agg == MultiTraitAgg.last)
+								 {
+									 setCell(t, dc, valueArray[valueArray.length - 1]);
+								 }
+								 else if (agg == MultiTraitAgg.avg || agg == MultiTraitAgg.sum)
+								 {
+									 double total = 0;
+
+									 int count = 0;
+									 for (String s : valueArray)
+									 {
+										 try
+										 {
+											 total += Double.parseDouble(s);
+											 count++;
+										 }
+										 catch (NullPointerException | NumberFormatException e)
+										 {
+											 // Do nothing here
+										 }
+									 }
+
+									 if (agg == MultiTraitAgg.avg)
+										 total /= count;
+
+									 setCell(t, dc, Double.toString(total));
+								 }
+							 }
+						 }
+						 catch (JsonSyntaxException | NullPointerException e)
+						 {
+							 setCell(t, dc, value);
+						 }
+
+						 try
+						 {
+							 String date = c.getDates().get(j);
+							 if (!StringUtils.isEmpty(value) && !StringUtils.isEmpty(date))
+							 {
+								 try
+								 {
+									 String[] dateArray = gson.fromJson(date, String[].class);
+
+									 if (dateArray != null && dateArray.length > 0)
+									 {
+										 // Use the last date available
+										 setCell(t, pc, SDFNS.format(SDF.parse(dateArray[dateArray.length - 1])));
+									 }
+								 }
+								 catch (JsonSyntaxException e)
+								 {
+									 setCell(t, pc, SDFNS.format(SDF.parse(date)));
+								 }
+							 }
+							 else
+							 {
+								 setCell(t, pc, null);
+							 }
+						 }
+						 catch (ParseException e)
+						 {
+							 // Ignore this
+						 }
+					 }
+				 });
 	}
 
 	private static XSSFCell getCell(XSSFRow row, int index)
@@ -282,14 +469,27 @@ public class DataToSpreadsheet
 		cell.setCellValue(value);
 	}
 
-	private static class CoordinateCell extends Cell {
-		private int row;
-		private int col;
+	private static class CoordinateCell extends Cell
+	{
+		protected int row;
+		protected int col;
 
-		public CoordinateCell (Cell original, int row, int col) {
+		public CoordinateCell(Cell original, int row, int col)
+		{
 			super(original);
 			this.row = row;
 			this.col = col;
+		}
+	}
+
+	private static class CoordinateDateCell extends CoordinateCell
+	{
+		protected String date;
+
+		public CoordinateDateCell(Cell original, int row, int col, String date)
+		{
+			super(original, row, col);
+			this.date = date;
 		}
 	}
 

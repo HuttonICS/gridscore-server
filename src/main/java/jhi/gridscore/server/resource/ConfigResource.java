@@ -273,6 +273,7 @@ public class ConfigResource extends ContextResource
 							featureBuilder.add(cell.getName());
 							featureBuilder.add(row + 1);
 							featureBuilder.add(col + 1);
+							featureBuilder.add(cell.getRep());
 							SimpleFeature feature = featureBuilder.buildFeature(null);
 							features.add(feature);
 						}
@@ -412,6 +413,7 @@ public class ConfigResource extends ContextResource
 		builder.add("germplasm", String.class); // <- 15 chars width for name field
 		builder.add("row", Integer.class);
 		builder.add("column", Integer.class);
+		builder.add("rep", String.class);
 
 		// build the type
 		return builder.buildFeatureType();
@@ -447,7 +449,7 @@ public class ConfigResource extends ContextResource
 				{
 					Configuration result = record.getConfiguration();
 
-					if (multiTraitAgg == null || multiTraitAgg.size() != result.getTraits().size())
+					if (!CollectionUtils.isEmpty(multiTraitAgg) && multiTraitAgg.size() != result.getTraits().size())
 					{
 						return Response.status(Response.Status.BAD_REQUEST)
 									   .build();
