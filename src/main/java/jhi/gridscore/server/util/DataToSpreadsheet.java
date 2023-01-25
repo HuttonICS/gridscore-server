@@ -1,26 +1,18 @@
 package jhi.gridscore.server.util;
 
 import com.google.gson.*;
-import jhi.gridscore.server.database.Database;
-import jhi.gridscore.server.database.codegen.tables.records.ConfigurationsRecord;
 import jhi.gridscore.server.pojo.*;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.poi.ss.SpreadsheetVersion;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.util.*;
 import org.apache.poi.xssf.usermodel.*;
-import org.jooq.DSLContext;
 import org.jooq.tools.StringUtils;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.sql.*;
 import java.text.*;
 import java.util.*;
-import java.util.Date;
 import java.util.stream.IntStream;
-
-import static jhi.gridscore.server.database.codegen.tables.Configurations.*;
 
 public class DataToSpreadsheet
 {
