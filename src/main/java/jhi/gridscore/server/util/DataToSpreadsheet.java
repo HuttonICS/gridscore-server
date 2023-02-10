@@ -127,8 +127,16 @@ public class DataToSpreadsheet
 					 // Write the rep
 					 dc = getCell(d, 1);
 					 pc = getCell(p, 1);
-					 dc.setCellValue(c.getRep());
-					 pc.setCellValue(c.getRep());
+					 if (!StringUtils.isBlank(c.getRep()))
+					 {
+						 dc.setCellValue(c.getRep());
+						 pc.setCellValue(c.getRep());
+					 }
+					 else
+					 {
+						 dc.setCellValue("1");
+						 pc.setCellValue("1");
+					 }
 
 					 // Write the row
 					 dc = getCell(d, 3);
