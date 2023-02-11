@@ -7,6 +7,7 @@ public class Trait
 	private String       name;
 	private String       type;
 	private String       mType;
+	private String       brapiId;
 	private Restrictions restrictions;
 
 	public String getName()
@@ -39,6 +40,17 @@ public class Trait
 	public Trait setmType(String mType)
 	{
 		this.mType = mType;
+		return this;
+	}
+
+	public String getBrapiId()
+	{
+		return brapiId;
+	}
+
+	public Trait setBrapiId(String brapiId)
+	{
+		this.brapiId = brapiId;
 		return this;
 	}
 

@@ -7,6 +7,7 @@ public class Cell
 {
 	private String       name;
 	private String       rep;
+	private String       brapiId;
 	private List<String> dates;
 	private List<String> values;
 	private Boolean      isMarked;
@@ -21,6 +22,7 @@ public class Cell
 	{
 		this.name = original.getName();
 		this.rep = original.getRep();
+		this.brapiId = original.getBrapiId();
 		this.dates = copyList(original.dates);
 		this.values = copyList(original.values);
 		this.isMarked = original.isMarked;
@@ -47,6 +49,17 @@ public class Cell
 	public Cell setRep(String rep)
 	{
 		this.rep = rep;
+		return this;
+	}
+
+	public String getBrapiId()
+	{
+		return brapiId;
+	}
+
+	public Cell setBrapiId(String brapiId)
+	{
+		this.brapiId = brapiId;
 		return this;
 	}
 

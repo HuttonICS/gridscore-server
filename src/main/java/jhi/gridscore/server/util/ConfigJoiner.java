@@ -136,12 +136,14 @@ public class ConfigJoiner
 				newCell.setGeolocation(bc.getGeolocation());
 				newCell.setComment(bc.getComment());
 				newCell.setIsMarked(bc.getIsMarked());
+				newCell.setBrapiId(bc.getBrapiId());
 			}
 			else if (bc == null)
 			{
 				newCell.setGeolocation(ac.getGeolocation());
 				newCell.setComment(ac.getComment());
 				newCell.setIsMarked(ac.getIsMarked());
+				newCell.setBrapiId(ac.getBrapiId());
 			}
 			else if (bLatest != null && (aLatest == null || bLatest.equals(aLatest) || bLatest.after(aLatest)))
 			{
@@ -163,6 +165,7 @@ public class ConfigJoiner
 				newCell.setGeolocation(ac.getGeolocation());
 				newCell.setComment(ac.getComment());
 				newCell.setIsMarked(ac.getIsMarked());
+				newCell.setBrapiId(ac.getBrapiId());
 			}
 
 			if (aLatest != null && (aLatestTotal == null || aLatest.after(aLatestTotal)))
@@ -287,6 +290,8 @@ public class ConfigJoiner
 						ac.setComment(bc.getComment());
 					if (!Objects.equals(ac.getIsMarked(), bc.getIsMarked()))
 						ac.setIsMarked(bc.getIsMarked());
+					if (!Objects.equals(ac.getBrapiId(), bc.getBrapiId()))
+						ac.setBrapiId(bc.getBrapiId());
 				}
 				else
 				{
@@ -294,6 +299,8 @@ public class ConfigJoiner
 						ac.setComment(bc.getComment());
 					if (ac.getIsMarked() == null)
 						ac.setIsMarked(bc.getIsMarked());
+					if (StringUtils.isEmpty(ac.getBrapiId()))
+						ac.setBrapiId(bc.getBrapiId());
 				}
 
 				ac.setDates(Arrays.asList(dates));
