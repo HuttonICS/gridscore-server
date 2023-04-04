@@ -5,6 +5,7 @@ import java.util.Objects;
 public class Trait
 {
 	private String       name;
+	private String       description;
 	private String       type;
 	private String       mType;
 	private String       brapiId;
@@ -18,6 +19,17 @@ public class Trait
 	public Trait setName(String name)
 	{
 		this.name = name;
+		return this;
+	}
+
+	public String getDescription()
+	{
+		return description;
+	}
+
+	public Trait setDescription(String description)
+	{
+		this.description = description;
 		return this;
 	}
 
@@ -71,13 +83,13 @@ public class Trait
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
 		Trait trait = (Trait) o;
-		return name.equals(trait.name) && type.equals(trait.type) && Objects.equals(mType, trait.mType) && Objects.equals(restrictions, trait.restrictions);
+		return name.equals(trait.name) && Objects.equals(description, trait.description) && type.equals(trait.type) && mType.equals(trait.mType) && Objects.equals(brapiId, trait.brapiId) && Objects.equals(restrictions, trait.restrictions);
 	}
 
 	@Override
 	public int hashCode()
 	{
-		return Objects.hash(name, type, mType, restrictions);
+		return Objects.hash(name, description, type, mType, brapiId, restrictions);
 	}
 
 	@Override
@@ -85,8 +97,10 @@ public class Trait
 	{
 		return "Trait{" +
 			"name='" + name + '\'' +
+			", description='" + description + '\'' +
 			", type='" + type + '\'' +
 			", mType='" + mType + '\'' +
+			", brapiId='" + brapiId + '\'' +
 			", restrictions=" + restrictions +
 			'}';
 	}

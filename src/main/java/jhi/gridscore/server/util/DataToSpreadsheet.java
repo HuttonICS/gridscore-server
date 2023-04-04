@@ -453,7 +453,7 @@ public class DataToSpreadsheet
 					 if (t.getRestrictions() != null)
 					 {
 						 if (!CollectionUtils.isEmpty(t.getRestrictions().getCategories()))
-							 row.createCell(7).setCellValue(String.join(",", t.getRestrictions().getCategories()));
+							 row.createCell(7).setCellValue("[[" + String.join(",", t.getRestrictions().getCategories()) + "]]");
 						 if (t.getRestrictions().getMin() != null)
 							 row.createCell(8).setCellValue(t.getRestrictions().getMin());
 						 if (t.getRestrictions().getMax() != null)
