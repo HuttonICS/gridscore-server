@@ -8,6 +8,7 @@ import org.jooq.impl.DSL;
 import org.jooq.tools.StringUtils;
 
 import java.io.*;
+import java.io.File;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.sql.*;
@@ -54,7 +55,7 @@ public class Database
 		{
 			try (Connection conn = getConnection())
 			{
-				DSL.using(conn, SQLDialect.MYSQL).close();
+				DSL.using(conn, SQLDialect.MYSQL);
 				connectionSuccessful = true;
 				break;
 			}
@@ -80,9 +81,9 @@ public class Database
 		if (initAndUpdate)
 		{
 			boolean databaseExists = true;
-			try (Connection conn = Database.getConnection();
-				 DSLContext context = Database.getContext(conn))
+			try (Connection conn = Database.getConnection())
 			{
+				DSLContext context = Database.getContext(conn);
 				// Try and see if the `germinatebase` table exists
 				context.selectFrom(CONFIGURATIONS)
 					   .fetchAny();
@@ -119,9 +120,9 @@ public class Database
 				Logger.getLogger("").log(Level.INFO, "DATABASE EXISTS, NO NEED TO CREATE IT!");
 			}
 
-			try (Connection conn = Database.getConnection();
-				 DSLContext context = Database.getContext(conn))
+			try (Connection conn = Database.getConnection())
 			{
+				DSLContext context = Database.getContext(conn);
 				context.execute("ALTER DATABASE `" + databaseName + "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
 			}
 			catch (SQLException | DataAccessException e)

@@ -57,9 +57,9 @@ public class ConfigResource extends ContextResource
 									.filter(Objects::nonNull)
 									.collect(Collectors.toList());
 
-		try (Connection conn = Database.getConnection();
-			 DSLContext context = Database.getContext(conn))
+		try (Connection conn = Database.getConnection())
 		{
+			DSLContext context = Database.getContext(conn);
 			Map<String, ConfigurationsRecord> matches = context.selectFrom(CONFIGURATIONS)
 															   .where(CONFIGURATIONS.UUID.in(uuids))
 															   .fetchMap(CONFIGURATIONS.UUID);
@@ -90,9 +90,9 @@ public class ConfigResource extends ContextResource
 		}
 		else
 		{
-			try (Connection conn = Database.getConnection();
-				 DSLContext context = Database.getContext(conn))
+			try (Connection conn = Database.getConnection())
 			{
+				DSLContext context = Database.getContext(conn);
 				// Has an id been provided?
 				if (!StringUtils.isEmpty(conf.getUuid()))
 				{
@@ -171,9 +171,9 @@ public class ConfigResource extends ContextResource
 		}
 		else
 		{
-			try (Connection conn = Database.getConnection();
-				 DSLContext context = Database.getContext(conn))
+			try (Connection conn = Database.getConnection())
 			{
+				DSLContext context = Database.getContext(conn);
 				ConfigurationsRecord record = context.selectFrom(CONFIGURATIONS)
 													 .where(CONFIGURATIONS.UUID.eq(id))
 													 .fetchAny();
@@ -205,9 +205,9 @@ public class ConfigResource extends ContextResource
 		if (StringUtils.isEmpty(name) || StringUtils.isEmpty(id))
 			return Response.status(Response.Status.BAD_REQUEST).build();
 
-		try (Connection conn = Database.getConnection();
-			 DSLContext context = Database.getContext(conn))
+		try (Connection conn = Database.getConnection())
 		{
+			DSLContext context = Database.getContext(conn);
 			ConfigurationsRecord record = context.selectFrom(CONFIGURATIONS)
 												 .where(CONFIGURATIONS.UUID.eq(id))
 												 .fetchAny();
@@ -238,9 +238,9 @@ public class ConfigResource extends ContextResource
 		}
 		else
 		{
-			try (Connection conn = Database.getConnection();
-				 DSLContext context = Database.getContext(conn))
+			try (Connection conn = Database.getConnection())
 			{
+				DSLContext context = Database.getContext(conn);
 				ConfigurationsRecord record = context.selectFrom(CONFIGURATIONS)
 													 .where(CONFIGURATIONS.UUID.eq(id))
 													 .fetchAny();
@@ -362,9 +362,9 @@ public class ConfigResource extends ContextResource
 	public Response getConfigShapefileDownload(@PathParam("id") String configId, @PathParam("uuid") String uuid)
 		throws IOException, SQLException
 	{
-		try (Connection conn = Database.getConnection();
-			 DSLContext context = Database.getContext(conn))
+		try (Connection conn = Database.getConnection())
 		{
+			DSLContext context = Database.getContext(conn);
 			Configurations record = context.selectFrom(CONFIGURATIONS)
 										   .where(CONFIGURATIONS.UUID.eq(configId))
 										   .fetchAnyInto(Configurations.class);
@@ -433,9 +433,9 @@ public class ConfigResource extends ContextResource
 		}
 		else
 		{
-			try (Connection conn = Database.getConnection();
-				 DSLContext context = Database.getContext(conn))
+			try (Connection conn = Database.getConnection())
 			{
+				DSLContext context = Database.getContext(conn);
 				ConfigurationsRecord record = context.selectFrom(CONFIGURATIONS)
 													 .where(CONFIGURATIONS.UUID.eq(id))
 													 .fetchAny();
@@ -496,9 +496,9 @@ public class ConfigResource extends ContextResource
 	public Response getConfigExportDownload(@PathParam("id") String configId, @PathParam("uuid") String uuid)
 		throws IOException, SQLException
 	{
-		try (Connection conn = Database.getConnection();
-			 DSLContext context = Database.getContext(conn))
+		try (Connection conn = Database.getConnection())
 		{
+			DSLContext context = Database.getContext(conn);
 			Configurations record = context.selectFrom(CONFIGURATIONS)
 										   .where(CONFIGURATIONS.UUID.eq(configId))
 										   .fetchAnyInto(Configurations.class);

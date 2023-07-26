@@ -13,9 +13,9 @@ public class OldConfigRemoverThread implements Runnable
 	@Override
 	public void run()
 	{
-		try (Connection conn = Database.getConnection();
-			 DSLContext context = Database.getContext(conn))
+		try (Connection conn = Database.getConnection())
 		{
+			DSLContext context = Database.getContext(conn);
 			// Delete configurations that are older than an hour
 			context.deleteFrom(CONFIGURATIONS)
 				   .where(DSL.abs(timestampDiff(DatePart.DAY, CONFIGURATIONS.CREATED_ON, DSL.now())).ge(30))

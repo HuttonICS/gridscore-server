@@ -87,20 +87,26 @@ public class DataToSpreadsheet
 						// Multi-trait, use individual dates in array
 						for (String multiDate : dateArray)
 						{
-							if (!unique.contains(multiDate))
+							if (!StringUtils.isBlank(multiDate))
 							{
-								cells.add(new CoordinateDateCell(r[col], row, col, multiDate));
-								unique.add(multiDate);
+								if (!unique.contains(multiDate))
+								{
+									cells.add(new CoordinateDateCell(r[col], row, col, multiDate));
+									unique.add(multiDate);
+								}
 							}
 						}
 					}
 					catch (JsonSyntaxException | NullPointerException e)
 					{
 						// Single-trait -> just use the date directly
-						if (!unique.contains(date))
+						if (!StringUtils.isBlank(date))
 						{
-							cells.add(new CoordinateDateCell(r[col], row, col, date));
-							unique.add(date);
+							if (!unique.contains(date))
+							{
+								cells.add(new CoordinateDateCell(r[col], row, col, date));
+								unique.add(date);
+							}
 						}
 					}
 				}

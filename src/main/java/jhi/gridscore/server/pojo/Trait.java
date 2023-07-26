@@ -83,7 +83,7 @@ public class Trait
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
 		Trait trait = (Trait) o;
-		return name.equals(trait.name) && Objects.equals(description, trait.description) && type.equals(trait.type) && mType.equals(trait.mType) && Objects.equals(brapiId, trait.brapiId) && Objects.equals(restrictions, trait.restrictions);
+		return name.equals(trait.name) && Objects.equals(description, trait.description) && type.equals(trait.type) && Objects.equals(mType, trait.mType) && Objects.equals(brapiId, trait.brapiId) && Objects.equals(restrictions, trait.restrictions);
 	}
 
 	@Override
